@@ -1,0 +1,114 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>User Management</h2>
+</div>
+
+<!-- Create user -->
+<section class="card">
+  <h3>Create User</h3>
+  <form method="post" action="/admin/users" class="user-create-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" name="first_name" maxlength="80" placeholder="Marko">
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" name="last_name" maxlength="80" placeholder="Petrović">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Username <small>(for login)</small></label>
+        <input type="text" name="username" required placeholder="marko.p">
+      </div>
+      <div class="form-group">
+        <label>Password <small>(min 6 chars)</small></label>
+        <input type="password" name="password" required minlength="6" placeholder="••••••">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Leagues <small>(hold Ctrl/Cmd for multiple)</small></label>
+        <select name="league_ids" multiple style="height:80px">
+          {% for league in leagues %}
+            <option value="{{ league.id }}">{{ league.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label class="checkbox-label" style="margin-bottom:.5rem">
+          <input type="checkbox" name="is_admin" value="1"> Admin
+        </label>
+        <button type="submit" class="btn btn-primary">Create User</button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- User list -->
+<section class="card">
+  <h3>All Users ({{ users | length }})</h3>
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Leagues</th>
+          <th>Login Attempts</th>
+          <th>Locked Until</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+          <tr {% if user.locked_until %}class="row-bad"{% endif %}>
+            <td>
+              <strong>{{ user.display_name }}</strong>
+              {% if user.display_name != user.username %}
+                <br><small style="color:var(--text-muted)">@{{ user.username }}</small>
+              {% endif %}
+            </td>
+            <td>{{ '👑 Admin' if user.is_admin else 'User' }}</td>
+            <td>
+              {% set user_lids = user_league_map.get(user.id, []) %}
+              {% if user_lids %}
+                {% for league in leagues %}
+                  {% if league.id in user_lids %}
+                    <span class="league-tag">{{ league.name }}</span>
+                  {% endif %}
+                {% endfor %}
+              {% else %}
+                <span style="color:var(--text-muted);font-size:.85rem">—</span>
+              {% endif %}
+            </td>
+            <td>{{ user.failed_login_attempts }}</td>
+            <td>
+              {% if user.locked_until %}
+                🔒 {{ to_local(user.locked_until).strftime('%H:%M %d %b') }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="action-cell">
+              <a href="/admin/users/{{ user.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+              <form method="post" action="/admin/users/{{ user.id }}/reset-password" class="inline-form-small">
+                <input type="password" name="new_password" placeholder="New password" minlength="6" required>
+                <button type="submit" class="btn btn-sm btn-secondary">Reset pw</button>
+              </form>
+              {% if user.locked_until %}
+                <form method="post" action="/admin/users/{{ user.id }}/unlock">
+                  <button type="submit" class="btn btn-sm btn-success">Unlock</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="help-text">Manage league membership in the <a href="/admin/leagues">Leagues</a> section.</p>
+</section>
+{% endblock %}

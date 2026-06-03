@@ -1,0 +1,127 @@
+{% extends "admin/base.html" %}
+{% block title %}Matches{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Match Management</h2>
+  <div class="profile-meta">
+    {{ visible_count }} match(es) currently visible to players
+    &nbsp;·&nbsp; Finished matches are hidden automatically when you enter a result
+  </div>
+</div>
+
+<!-- Reveal upcoming matches -->
+<section class="card">
+  <h3>📅 Reveal upcoming matches</h3>
+  <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.9rem">
+    Sets a rolling window: matches <strong>within</strong> the chosen period become visible,
+    matches <strong>beyond</strong> it are hidden. Click once per day to keep the window fresh.
+  </p>
+  <form method="post" action="/admin/matches/bulk-show-days" class="inline-form">
+    <label style="font-weight:500">Show next</label>
+    <select name="days" style="width:auto">
+      <option value="1">1 day</option>
+      <option value="2">2 days</option>
+      <option value="3" selected>3 days</option>
+      <option value="4">4 days</option>
+      <option value="5">5 days</option>
+      <option value="7">7 days</option>
+    </select>
+    <button type="submit" class="btn btn-primary">🔄 Apply window</button>
+  </form>
+</section>
+
+<!-- Create match -->
+<section class="card">
+  <h3>Create Match <small style="font-weight:400;color:var(--text-muted)">(new matches are hidden by default)</small></h3>
+  <form method="post" action="/admin/matches" class="match-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phase</label>
+        <select name="phase_id" required>
+          {% for phase in phases %}
+            <option value="{{ phase.id }}">{{ phase.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Kickoff (UTC)</label>
+        <input type="datetime-local" name="kickoff_utc" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Team 1 Code <small>(e.g. br)</small></label>
+        <input type="text" name="team1_code" maxlength="5" required placeholder="br">
+      </div>
+      <div class="form-group">
+        <label>Team 1 Name</label>
+        <input type="text" name="team1_name" maxlength="50" required placeholder="Brazil">
+      </div>
+      <div class="form-group">
+        <label>Team 2 Code</label>
+        <input type="text" name="team2_code" maxlength="5" required placeholder="ar">
+      </div>
+      <div class="form-group">
+        <label>Team 2 Name</label>
+        <input type="text" name="team2_name" maxlength="50" required placeholder="Argentina">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Match</button>
+  </form>
+</section>
+
+<!-- Match list -->
+<section class="card">
+  <h3>All Matches ({{ matches | length }})</h3>
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th title="Visible to players in All tab">Visible</th>
+          <th>Phase</th>
+          <th>Kickoff (Ljubljana)</th>
+          <th>Match</th>
+          <th>Result</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for match in matches %}
+          <tr class="{% if not match.is_visible %}row-hidden{% endif %}">
+            <td class="visibility-cell">
+              <form method="post" action="/admin/matches/{{ match.id }}/toggle-visibility">
+                <button type="submit"
+                        class="btn-visibility {% if match.is_visible %}vis-on{% else %}vis-off{% endif %}"
+                        title="{{ 'Click to hide from players' if match.is_visible else 'Click to show to players' }}">
+                  {{ '👁' if match.is_visible else '🙈' }}
+                </button>
+              </form>
+            </td>
+            <td><small>{{ match.phase.name }}</small></td>
+            <td>{{ to_local(match.kickoff_utc).strftime('%d %b %H:%M') }}</td>
+            <td>
+              <img src="https://flagcdn.com/16x12/{{ match.team1_code }}.png" onerror="this.style.display='none'" alt="">
+              {{ match.team1_name }}
+              <span class="vs">vs</span>
+              {{ match.team2_name }}
+              <img src="https://flagcdn.com/16x12/{{ match.team2_code }}.png" onerror="this.style.display='none'" alt="">
+            </td>
+            <td>
+              {% if match.is_finished %}
+                ✅ <strong>{{ match.result_goals1 }}:{{ match.result_goals2 }}</strong>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td class="action-cell">
+              <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+              <a href="/admin/matches/{{ match.id }}/result" class="btn btn-sm btn-primary">Result</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

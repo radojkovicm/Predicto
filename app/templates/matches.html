@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Matches</h2>
+</div>
+
+<!-- Phase tabs -->
+<div class="tabs">
+  <a href="/matches" class="tab {% if not selected_phase_id %}active{% endif %}">All</a>
+  {% for phase in phases %}
+    <a href="/matches?phase_id={{ phase.id }}"
+       class="tab {% if selected_phase_id == phase.id %}active{% endif %}">
+      {{ phase.name }}
+    </a>
+  {% endfor %}
+</div>
+
+{% for group in grouped_phases %}
+  <section class="phase-section">
+    <h3 class="phase-title">{{ group.phase.name }}</h3>
+
+    <div class="match-list">
+      {% for match in group.matches %}
+        {% set pred = user_preds.get(match.id) %}
+        {% set locked = is_locked(match) %}
+        <a href="/matches/{{ match.id }}" class="match-card {% if match.is_finished %}finished{% endif %}">
+          <div class="match-card-kickoff">
+            {{ to_local(match.kickoff_utc).strftime('%d %b %H:%M') }}
+            {% if locked %}
+              <span class="lock-icon" title="Locked">🔒</span>
+            {% else %}
+              <span class="lock-icon open" title="Open">🟢</span>
+            {% endif %}
+          </div>
+
+          <div class="match-card-teams">
+            <span class="team">
+              {% if match.team1_code == 'tbd' %}
+                <span class="flag-placeholder" title="TBD"></span>
+              {% else %}
+                <img src="https://flagcdn.com/20x15/{{ match.team1_code }}.png"
+                     onerror="this.outerHTML='<span class=\'flag-placeholder\'></span>'"
+                     alt="{{ match.team1_name }}" class="flag">
+              {% endif %}
+              {{ match.team1_name }}
+            </span>
+            <span class="vs">
+              {% if match.is_finished %}
+                <strong>{{ match.result_goals1 }}:{{ match.result_goals2 }}</strong>
+              {% else %}
+                vs
+              {% endif %}
+            </span>
+            <span class="team">
+              {{ match.team2_name }}
+              {% if match.team2_code == 'tbd' %}
+                <span class="flag-placeholder" title="TBD"></span>
+              {% else %}
+                <img src="https://flagcdn.com/20x15/{{ match.team2_code }}.png"
+                     onerror="this.outerHTML='<span class=\'flag-placeholder\'></span>'"
+                     alt="{{ match.team2_name }}" class="flag">
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="match-card-pred">
+            {% if pred %}
+              <span class="pred-badge {% if match.is_finished %}{% if pred.points is not none and pred.points >= 10 %}pred-good{% elif pred.points is not none %}pred-bad{% endif %}{% endif %}">
+                {{ pred.pred_goals1 }}:{{ pred.pred_goals2 }}
+                {% if pred.is_joker %}<span class="joker-icon" title="Joker">🃏</span>{% endif %}
+                {% if match.is_finished and pred.points is not none %}
+                  <span class="points-badge">{{ pred.points }}pts</span>
+                {% endif %}
+              </span>
+            {% elif not locked %}
+              <span class="pred-missing">No prediction yet</span>
+            {% else %}
+              <span class="pred-missing">—</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% else %}
+  <p class="empty-state">No matches found.</p>
+{% endfor %}
+{% endblock %}

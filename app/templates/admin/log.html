@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% block title %}Result Log{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Result Change Log</h2>
+</div>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Match</th>
+          <th>Old Result</th>
+          <th>New Result</th>
+          <th>Changed By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td><small>{{ to_local(log.changed_at).strftime('%d %b %Y %H:%M:%S') }}</small></td>
+            <td>
+              <a href="/matches/{{ log.match_id }}">
+                {{ log.match.team1_name }} vs {{ log.match.team2_name }}
+              </a>
+            </td>
+            <td>
+              {% if log.old_goals1 is not none %}
+                {{ log.old_goals1 }}:{{ log.old_goals2 }}
+              {% else %}—{% endif %}
+            </td>
+            <td><strong>{{ log.new_goals1 }}:{{ log.new_goals2 }}</strong></td>
+            <td>{{ log.changed_by_user.username }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-state">No result changes logged yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

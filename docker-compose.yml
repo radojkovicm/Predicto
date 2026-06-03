@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: predicto
+      POSTGRES_USER: predicto
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U predicto"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://predicto:${POSTGRES_PASSWORD:-changeme}@db:5432/predicto
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      REMINDER_API_TOKEN: ${REMINDER_API_TOKEN:?REMINDER_API_TOKEN is required}
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "127.0.0.1:8000:8000"  # only nginx can reach this, not public internet
+    volumes:
+      - ./app/static:/app/app/static:ro
+
+volumes:
+  postgres_data:

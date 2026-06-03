@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit Match{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/matches" class="back-link">← Matches</a>
+  <h2>Edit Match</h2>
+</div>
+
+<section class="card">
+  <form method="post" action="/admin/matches/{{ match.id }}/edit" class="match-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phase</label>
+        <select name="phase_id" required>
+          {% for phase in phases %}
+            <option value="{{ phase.id }}" {% if phase.id == match.phase_id %}selected{% endif %}>
+              {{ phase.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Kickoff (UTC)</label>
+        <input type="datetime-local" name="kickoff_utc" required
+               value="{{ match.kickoff_utc.strftime('%Y-%m-%dT%H:%M') }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Team 1 Code</label>
+        <input type="text" name="team1_code" maxlength="5" required value="{{ match.team1_code }}">
+      </div>
+      <div class="form-group">
+        <label>Team 1 Name</label>
+        <input type="text" name="team1_name" maxlength="50" required value="{{ match.team1_name }}">
+      </div>
+      <div class="form-group">
+        <label>Team 2 Code</label>
+        <input type="text" name="team2_code" maxlength="5" required value="{{ match.team2_code }}">
+      </div>
+      <div class="form-group">
+        <label>Team 2 Name</label>
+        <input type="text" name="team2_name" maxlength="50" required value="{{ match.team2_name }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </form>
+</section>
+{% endblock %}

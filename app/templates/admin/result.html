@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block title %}Enter Result{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/matches" class="back-link">← Matches</a>
+  <h2>Enter Result</h2>
+</div>
+
+<section class="card">
+  <div class="match-hero-compact">
+    <img src="https://flagcdn.com/32x24/{{ match.team1_code }}.png" onerror="this.style.display='none'" alt="">
+    <strong>{{ match.team1_name }}</strong>
+    <span class="vs">vs</span>
+    <strong>{{ match.team2_name }}</strong>
+    <img src="https://flagcdn.com/32x24/{{ match.team2_code }}.png" onerror="this.style.display='none'" alt="">
+    <br>
+    <small>{{ match.phase.name }} · {{ to_local(match.kickoff_utc).strftime('%d %b %Y %H:%M') }}</small>
+  </div>
+
+  {% if match.is_finished %}
+    <div class="current-result">
+      Current result: <strong>{{ match.result_goals1 }}:{{ match.result_goals2 }}</strong>
+      <small>(entering a new result will recompute all points)</small>
+    </div>
+  {% endif %}
+
+  <form method="post" action="/admin/matches/{{ match.id }}/result" class="result-form">
+    <div class="result-inputs">
+      <div class="form-group">
+        <label>{{ match.team1_name }} Goals</label>
+        <input type="number" name="goals1" min="0" max="99" required class="goals-input"
+               value="{{ match.result_goals1 if match.is_finished else '' }}">
+      </div>
+      <span class="pred-sep">:</span>
+      <div class="form-group">
+        <label>{{ match.team2_name }} Goals</label>
+        <input type="number" name="goals2" min="0" max="99" required class="goals-input"
+               value="{{ match.result_goals2 if match.is_finished else '' }}">
+      </div>
+    </div>
+    <p class="help-text">Enter the score at end of regular time or extra time. Penalties do NOT count.</p>
+    <button type="submit" class="btn btn-primary">Save Result &amp; Recompute Points</button>
+  </form>
+</section>
+{% endblock %}

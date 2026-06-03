@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}{{ match.team1_name }} vs {{ match.team2_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/matches" class="back-link">← Matches</a>
+</div>
+
+<!-- Match header -->
+<div class="match-hero">
+  <div class="match-hero-phase">{{ match.phase.name }}</div>
+  <div class="match-hero-teams">
+    <div class="hero-team">
+      {% if match.team1_code != 'tbd' %}
+        <img src="https://flagcdn.com/40x30/{{ match.team1_code }}.png"
+             onerror="this.outerHTML='<span class=\'flag-placeholder flag-placeholder-lg\'></span>'"
+             alt="{{ match.team1_name }}" class="flag-lg">
+      {% else %}
+        <span class="flag-placeholder flag-placeholder-lg"></span>
+      {% endif %}
+      <span>{{ match.team1_name }}</span>
+    </div>
+    <div class="hero-score">
+      {% if match.is_finished %}
+        <span class="final-score">{{ match.result_goals1 }}:{{ match.result_goals2 }}</span>
+        <div class="final-label">Final</div>
+      {% else %}
+        <span class="kickoff-time">{{ to_local(match.kickoff_utc).strftime('%d %b %Y %H:%M') }}</span>
+        {% if locked %}
+          <div class="lock-status locked">🔒 Locked</div>
+        {% else %}
+          <div class="lock-status open">🟢 Open</div>
+        {% endif %}
+      {% endif %}
+    </div>
+    <div class="hero-team">
+      {% if match.team2_code != 'tbd' %}
+        <img src="https://flagcdn.com/40x30/{{ match.team2_code }}.png"
+             onerror="this.outerHTML='<span class=\'flag-placeholder flag-placeholder-lg\'></span>'"
+             alt="{{ match.team2_name }}" class="flag-lg">
+      {% else %}
+        <span class="flag-placeholder flag-placeholder-lg"></span>
+      {% endif %}
+      <span>{{ match.team2_name }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Prediction form -->
+{% if not locked %}
+  <section class="card">
+    <h3>Your Prediction</h3>
+    <form method="post" action="/predictions" class="pred-form">
+      <input type="hidden" name="match_id" value="{{ match.id }}">
+
+      <div class="pred-scoreboard">
+        <!-- Team 1 -->
+        <div class="pred-team-col">
+          <div class="pred-team-name">
+            {% if match.team1_code != 'tbd' %}
+              <img src="https://flagcdn.com/24x18/{{ match.team1_code }}.png"
+                   onerror="this.style.display='none'" alt="" class="flag">
+            {% endif %}
+            {{ match.team1_name }}
+          </div>
+          <input type="number" name="pred_goals1" min="0" max="99" required
+                 inputmode="numeric" placeholder="0"
+                 value="{{ user_pred.pred_goals1 if user_pred else '' }}"
+                 class="goals-input" id="goals1"
+                 aria-label="{{ match.team1_name }} goals">
+          <span class="pred-hint">goals</span>
+        </div>
+
+        <!-- Separator -->
+        <div class="pred-sep-col">
+          <span class="pred-sep-colon">:</span>
+          <span class="pred-sep-label">vs</span>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="pred-team-col">
+          <div class="pred-team-name">
+            {% if match.team2_code != 'tbd' %}
+              <img src="https://flagcdn.com/24x18/{{ match.team2_code }}.png"
+                   onerror="this.style.display='none'" alt="" class="flag">
+            {% endif %}
+            {{ match.team2_name }}
+          </div>
+          <input type="number" name="pred_goals2" min="0" max="99" required
+                 inputmode="numeric" placeholder="0"
+                 value="{{ user_pred.pred_goals2 if user_pred else '' }}"
+                 class="goals-input" id="goals2"
+                 aria-label="{{ match.team2_name }} goals">
+          <span class="pred-hint">goals</span>
+        </div>
+      </div>
+
+      {% if can_use_joker %}
+        <div class="joker-row">
+          <label class="checkbox-label">
+            <input type="checkbox" name="is_joker" value="1"
+                   {% if user_pred and user_pred.is_joker %}checked{% endif %}>
+            <span>🃏 Use Joker</span>
+            <small>(+8 if correct, −5 if wrong — max 1 per phase)</small>
+          </label>
+        </div>
+      {% elif user_pred and user_pred.is_joker %}
+        <div class="joker-row joker-active">
+          🃏 <strong>Joker active</strong> on this prediction
+        </div>
+      {% elif match.phase.joker_allowed %}
+        <div class="joker-row joker-used">
+          Joker already used in this phase.
+        </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary btn-predict">
+        {{ '💾 Update Prediction' if user_pred else '✅ Save Prediction' }}
+      </button>
+    </form>
+  </section>
+{% elif user_pred %}
+  <section class="card">
+    <h3>Your Prediction</h3>
+    <div class="pred-summary">
+      <span class="pred-score">{{ user_pred.pred_goals1 }}:{{ user_pred.pred_goals2 }}</span>
+      {% if user_pred.is_joker %}<span class="joker-icon">🃏 Joker</span>{% endif %}
+      {% if match.is_finished and user_pred.points is not none %}
+        <span class="points-big">{{ user_pred.points }} pts</span>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}
+
+<!-- Stats (after lock) -->
+{% if locked and stats %}
+  <section class="card">
+    <h3>Prediction Statistics
+      {% if active_league %}
+        <span class="league-context-tag">{{ active_league.name }}</span>
+      {% endif %}
+    </h3>
+    {% if user_leagues | length > 1 %}
+      <div class="league-stat-tabs">
+        {% for league in user_leagues %}
+          <a href="/matches/{{ match.id }}?league_id={{ league.id }}"
+             class="tab-sm {% if active_league and active_league.id == league.id %}active{% endif %}">
+            {{ league.name }}
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="stat-bars">
+      <div class="stat-bar-row">
+        <span class="stat-label">🏠 Home ({{ stats.home_pct }}%)</span>
+        <div class="stat-bar"><div class="stat-fill home" style="width:{{ stats.home_pct }}%"></div></div>
+        <span class="stat-count">{{ stats.home_count }}</span>
+      </div>
+      <div class="stat-bar-row">
+        <span class="stat-label">🤝 Draw ({{ stats.draw_pct }}%)</span>
+        <div class="stat-bar"><div class="stat-fill draw" style="width:{{ stats.draw_pct }}%"></div></div>
+        <span class="stat-count">{{ stats.draw_count }}</span>
+      </div>
+      <div class="stat-bar-row">
+        <span class="stat-label">✈️ Away ({{ stats.away_pct }}%)</span>
+        <div class="stat-bar"><div class="stat-fill away" style="width:{{ stats.away_pct }}%"></div></div>
+        <span class="stat-count">{{ stats.away_count }}</span>
+      </div>
+    </div>
+
+    {% if stats.most_common_score %}
+      <p class="most-common">Most predicted score: <strong>{{ stats.most_common_score }}</strong></p>
+    {% endif %}
+
+    {% if match.is_finished %}
+      <div class="result-summary">
+        <span class="result-hit">✅ {{ stats.correct_tips }} of {{ stats.total }} got the correct tip</span>
+        {% if stats.prophets %}
+          <span class="prophets">🔮 Perfect score: {{ stats.prophets | join(', ') }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <h4>All Predictions</h4>
+    <div class="pred-table-wrap">
+      <table class="pred-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Prediction</th>
+            <th>Joker</th>
+            {% if match.is_finished %}<th>Points</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in stats.all_predictions %}
+            <tr class="{% if match.is_finished %}{% if p.points is not none and p.points >= 10 %}row-good{% elif p.points is not none and p.points > 0 %}row-ok{% elif p.points is not none %}row-bad{% endif %}{% endif %}">
+              <td>{{ p.display_name }}</td>
+              <td>{{ p.pred }}</td>
+              <td>{{ '🃏' if p.is_joker else '' }}</td>
+              {% if match.is_finished %}<td>{{ p.points if p.points is not none else '—' }}</td>{% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

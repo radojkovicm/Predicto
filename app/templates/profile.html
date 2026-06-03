@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.username }}'s Profile{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>
+    {{ profile_user.display_name }}
+    {% if profile_user.id == current_user.id %}<span class="you-tag">(you)</span>{% endif %}
+  </h2>
+  <div class="profile-meta">
+    {% if profile_user.id == current_user.id or current_user.is_admin %}
+      @{{ profile_user.username }} &nbsp;·&nbsp;
+    {% endif %}
+    Member since {{ profile_user.created_at.strftime('%b %Y') }}
+    {% if profile_user.id == current_user.id %}
+      &nbsp;·&nbsp; <a href="/settings">Edit settings</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- League tabs (for badge/context switching) -->
+{% if user_leagues | length > 1 %}
+  <div class="tabs">
+    {% for league in user_leagues %}
+      <a href="/profile/{{ profile_user.id }}?league_id={{ league.id }}"
+         class="tab {% if active_league and active_league.id == league.id %}active{% endif %}">
+        {{ league.name }}
+      </a>
+    {% endfor %}
+  </div>
+{% elif active_league %}
+  <div class="league-banner">🏆 {{ active_league.name }}</div>
+{% endif %}
+
+<!-- Stats summary -->
+<div class="profile-stats">
+  <div class="stat-card">
+    <div class="stat-value">{{ total_points }}</div>
+    <div class="stat-name">Total Points</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ predictions | length }}</div>
+    <div class="stat-name">Predictions</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ badges | length }}</div>
+    <div class="stat-name">Badges</div>
+  </div>
+</div>
+
+<!-- Badges -->
+{% if badges %}
+  <section class="card">
+    <h3>Badges
+      {% if active_league %}<span class="league-context-tag">{{ active_league.name }} + personal</span>{% endif %}
+    </h3>
+    <div class="badge-list">
+      {% for ub in badges %}
+        {% set name, emoji = badge_display(ub.badge_code) %}
+        <div class="badge-item">
+          <span class="badge-emoji">{{ emoji }}</span>
+          <div class="badge-info">
+            <strong>{{ name }}</strong>
+            <small>
+              {{ ub.awarded_at.strftime('%d %b %Y') }}
+              {% if ub.match %}· {{ ub.match.team1_name }} vs {{ ub.match.team2_name }}{% endif %}
+              {% if ub.league %}· <em>{{ ub.league.name }}</em>{% endif %}
+            </small>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
+<!-- Prediction history -->
+<section class="card">
+  <h3>Prediction History</h3>
+  {% if predictions %}
+    <div class="table-wrap">
+      <table class="pred-history-table">
+        <thead>
+          <tr>
+            <th>Match</th>
+            <th>Date</th>
+            <th>Prediction</th>
+            <th>Result</th>
+            <th>Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pred in predictions %}
+            <tr class="{% if pred.points is not none and pred.points >= 10 %}row-good{% elif pred.points is not none and pred.points > 0 %}row-ok{% elif pred.points is not none and pred.match.is_finished %}row-bad{% endif %}">
+              <td>
+                <a href="/matches/{{ pred.match_id }}{% if active_league %}?league_id={{ active_league.id }}{% endif %}">
+                  {{ pred.match.team1_name }} vs {{ pred.match.team2_name }}
+                </a>
+                <small class="phase-tag">{{ pred.match.phase.name }}</small>
+              </td>
+              <td class="hide-sm">{{ to_local(pred.match.kickoff_utc).strftime('%d %b') }}</td>
+              <td>
+                {{ pred.pred_goals1 }}:{{ pred.pred_goals2 }}
+                {% if pred.is_joker %}<span class="joker-icon" title="Joker">🃏</span>{% endif %}
+              </td>
+              <td>
+                {% if pred.match.is_finished %}{{ pred.match.result_goals1 }}:{{ pred.match.result_goals2 }}
+                {% else %}—{% endif %}
+              </td>
+              <td>{% if pred.points is not none %}<strong>{{ pred.points }}</strong>{% else %}—{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">No predictions yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

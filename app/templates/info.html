@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Rules{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Scoring Rules</h2>
+</div>
+
+<section class="card rules-card">
+  <h3>How Points Work</h3>
+  <p>For each match you predict the exact score. Points are calculated after the official result (end of extra time — <strong>penalties do not count</strong>).</p>
+
+  <table class="rules-table">
+    <thead><tr><th>What you get right</th><th>Points</th></tr></thead>
+    <tbody>
+      <tr><td>Correct outcome (Home / Draw / Away)</td><td><strong>+10</strong></td></tr>
+      <tr><td>Correct goal difference (e.g. both predict +2)</td><td><strong>+7</strong></td></tr>
+      <tr><td>Correct goals for Team 1</td><td><strong>+4</strong></td></tr>
+      <tr><td>Correct goals for Team 2</td><td><strong>+4</strong></td></tr>
+      <tr class="highlight-row"><td>Perfect prediction (exact score)</td><td><strong>25 max</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="rule-note">
+    ⚠️ Note: if the goal difference is correct, the outcome is automatically also correct, so those two always stack together.
+  </div>
+</section>
+
+<section class="card rules-card">
+  <h3>🃏 Joker</h3>
+  <p>You have <strong>8 jokers</strong> total — exactly <strong>1 per phase</strong>. When you mark a prediction as a Joker:</p>
+  <table class="rules-table">
+    <tbody>
+      <tr><td>Joker hit (outcome correct)</td><td><strong>+8</strong> extra</td></tr>
+      <tr><td>Joker miss (outcome wrong)</td><td><strong>−5</strong> penalty</td></tr>
+    </tbody>
+  </table>
+  <p>A perfect prediction with a joker hit = <strong>33 points</strong>.</p>
+  <p>A joker miss can make your total negative for that match!</p>
+</section>
+
+<section class="card rules-card">
+  <h3>📅 Lock Rule</h3>
+  <p>Predictions close <strong>15 minutes before kickoff</strong>. After that, you cannot create or edit a prediction for that match.</p>
+  <p>Other players' predictions become visible only after a match locks.</p>
+</section>
+
+<section class="card rules-card">
+  <h3>🏆 Leaderboard Tie-break</h3>
+  <p>When players are tied on points, the ranking uses:</p>
+  <ol>
+    <li>Total points <em>(higher is better)</em></li>
+    <li>Number of correct tips (outcome matched) <em>(higher is better)</em></li>
+    <li>Number of exact scores <em>(higher is better)</em></li>
+    <li>Time of last prediction <em>(earlier is better — commit to your picks!)</em></li>
+  </ol>
+</section>
+
+<section class="card rules-card">
+  <h3>🏅 Badges</h3>
+  <table class="rules-table">
+    <thead><tr><th>Badge</th><th>How to earn it</th></tr></thead>
+    <tbody>
+      <tr><td>🔮 Prophet</td><td>Predict the exact score of a match</td></tr>
+      <tr><td>🔥 Hot Streak</td><td>3 consecutive matches each with ≥ 10 points</td></tr>
+      <tr><td>🃏 Joker Master</td><td>Land a joker (outcome correct)</td></tr>
+      <tr><td>💀 Joker Victim</td><td>Miss a joker (outcome wrong)</td></tr>
+      <tr><td>🐺 Lone Wolf</td><td>Only player (or one of ≤1) to get the correct tip when ≥70% got it wrong</td></tr>
+      <tr><td>🐑 Sheep</td><td>Followed the majority outcome — and the majority was wrong</td></tr>
+      <tr><td>👑 Comeback King</td><td>Jumped 5+ positions on the leaderboard in a single result batch</td></tr>
+      <tr><td>💪 Iron Man</td><td>Submitted a prediction for every match in a phase</td></tr>
+      <tr><td>🏆 Group Stage Guru</td><td>Highest total points across all 3 group stages</td></tr>
+    </tbody>
+  </table>
+</section>
+{% endblock %}

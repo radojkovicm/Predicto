@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Predicto 2026</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-page">
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <span class="login-logo">⚽</span>
+      <h1>Predicto 2026</h1>
+      <p>Developed by Miloš</p>
+    </div>
+
+    {% for f in flashes %}
+      <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+    {% endfor %}
+
+    <form method="post" action="/login" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username"
+               autofocus required placeholder="your username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password"
+               required placeholder="••••••••">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+    </form>
+  </div>
+</div>
+<button id="theme-toggle" class="btn-icon theme-toggle-login" aria-label="Toggle dark mode">🌙</button>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

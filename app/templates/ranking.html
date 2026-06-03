@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Ranking{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Leaderboard</h2>
+</div>
+
+{% if not user_leagues %}
+  <div class="card empty-league-card">
+    <p class="empty-state">You are not in any league yet.</p>
+    <p style="text-align:center;color:var(--text-muted);font-size:.9rem">Ask your admin to add you to a league.</p>
+  </div>
+
+{% else %}
+
+  <!-- League tabs -->
+  {% if user_leagues | length > 1 %}
+    <div class="tabs">
+      {% for league in user_leagues %}
+        <a href="/ranking?league_id={{ league.id }}"
+           class="tab {% if active_league and active_league.id == league.id %}active{% endif %}">
+          {{ league.name }}
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="league-banner">🏆 {{ active_league.name }}</div>
+  {% endif %}
+
+  {% if leaderboard %}
+    <div class="table-wrap">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th title="Total points">Pts</th>
+            <th title="Correct tips (outcome matched)" class="hide-sm">Tips</th>
+            <th title="Exact scores" class="hide-sm">Exact</th>
+            <th>Badges</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in leaderboard %}
+            {% set is_me = current_user and entry.user_id == current_user.id %}
+            <tr class="{% if is_me %}row-me{% endif %}">
+              <td class="rank-cell">
+                {% if entry.rank == 1 %}🥇
+                {% elif entry.rank == 2 %}🥈
+                {% elif entry.rank == 3 %}🥉
+                {% else %}{{ entry.rank }}
+                {% endif %}
+              </td>
+              <td>
+                <a href="/profile/{{ entry.user_id }}{% if active_league %}?league_id={{ active_league.id }}{% endif %}" class="player-link">
+                  {{ entry.display_name }}
+                  {% if is_me %}<span class="you-tag">(you)</span>{% endif %}
+                </a>
+              </td>
+              <td class="points-cell"><strong>{{ entry.total_points }}</strong></td>
+              <td class="hide-sm">{{ entry.correct_tips }}</td>
+              <td class="hide-sm">{{ entry.exact_scores }}</td>
+              <td class="badges-cell">
+                {% for code in entry.badges | unique %}
+                  {% set name, emoji = badge_display(code) %}
+                  <span class="badge-icon" title="{{ name }}">{{ emoji }}</span>
+                {% endfor %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="ranking-note">
+      Tie-break: points → correct tips → exact scores → earliest last prediction.
+    </p>
+  {% else %}
+    <p class="empty-state">No predictions yet in this league.</p>
+  {% endif %}
+
+{% endif %}
+{% endblock %}

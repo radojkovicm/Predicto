@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>My Settings</h2>
+  <div class="profile-meta">@{{ current_user.username }}</div>
+</div>
+
+<!-- Name -->
+<section class="card">
+  <h3>👤 Name</h3>
+  <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.75rem">
+    Your full name is shown on the leaderboard and profile. Username is used only for login.
+  </p>
+  <form method="post" action="/settings/name" class="settings-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>First Name</label>
+        <input type="text" name="first_name" maxlength="80"
+               value="{{ current_user.first_name or '' }}"
+               placeholder="e.g. Marko">
+      </div>
+      <div class="form-group">
+        <label>Last Name</label>
+        <input type="text" name="last_name" maxlength="80"
+               value="{{ current_user.last_name or '' }}"
+               placeholder="e.g. Petrović">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Name</button>
+  </form>
+</section>
+
+<!-- Password -->
+<section class="card">
+  <h3>🔒 Change Password</h3>
+  <form method="post" action="/settings/password" class="settings-form">
+    <div class="form-group" style="max-width:360px">
+      <label>Current Password</label>
+      <input type="password" name="current_password" required autocomplete="current-password">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>New Password <small>(min 6 chars)</small></label>
+        <input type="password" name="new_password" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" name="confirm_password" required minlength="6" autocomplete="new-password">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Change Password</button>
+  </form>
+</section>
+{% endblock %}

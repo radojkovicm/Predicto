@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin{% endblock %} — Predicto 2026</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="navbar">
+  <div class="container navbar-inner">
+    <a href="/admin/matches" class="brand">⚙️ Admin</a>
+    <nav class="nav-links">
+      <a href="/admin/matches" {% if request.url.path == '/admin/matches' %}class="active"{% endif %}>Matches</a>
+      <a href="/admin/users"   {% if request.url.path == '/admin/users'   %}class="active"{% endif %}>Users</a>
+      <a href="/admin/leagues" {% if request.url.path == '/admin/leagues' %}class="active"{% endif %}>Leagues</a>
+      <a href="/admin/log"     {% if request.url.path == '/admin/log'     %}class="active"{% endif %}>Result Log</a>
+      <a href="/admin/prediction-log" {% if request.url.path == '/admin/prediction-log' %}class="active"{% endif %}>Pred. Log</a>
+      <a href="/matches">← App</a>
+      <form action="/logout" method="post" style="display:inline">
+        <button type="submit" class="btn-link">Logout</button>
+      </form>
+    </nav>
+    <button id="theme-toggle" class="btn-icon" aria-label="Toggle dark mode">🌙</button>
+    <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobile-menu">
+  <a href="/admin/matches">Matches</a>
+  <a href="/admin/users">Users</a>
+  <a href="/admin/leagues">Leagues</a>
+  <a href="/admin/log">Result Log</a>
+  <a href="/admin/prediction-log">Pred. Log</a>
+  <a href="/matches">← App</a>
+  <form action="/logout" method="post">
+    <button type="submit" class="btn-link">Logout</button>
+  </form>
+</div>
+
+<main class="container main-content">
+  {% for f in flashes %}
+    <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+
+<script src="/static/js/main.js"></script>
+</body>
+</html>

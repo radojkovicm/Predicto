@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+{% block title %}Prediction Audit Log{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Prediction Audit Log</h2>
+  <p class="subtitle">Every prediction create/edit is recorded here. Use this to resolve disputes.</p>
+</div>
+
+<!-- Filters -->
+<section class="card filter-card">
+  <form method="get" action="/admin/prediction-log" class="filter-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Filter by User</label>
+        <select name="user_id">
+          <option value="">All users</option>
+          {% for user in users %}
+            <option value="{{ user.id }}" {% if filter_user_id == user.id %}selected{% endif %}>
+              {{ user.username }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filter by Match</label>
+        <select name="match_id">
+          <option value="">All matches</option>
+          {% for match in matches %}
+            <option value="{{ match.id }}" {% if filter_match_id == match.id %}selected{% endif %}>
+              {{ match.team1_name }} vs {{ match.team2_name }} ({{ match.phase.name }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group form-group-btn">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        <a href="/admin/prediction-log" class="btn btn-link">Clear</a>
+      </div>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Player</th>
+          <th>Match</th>
+          <th>Old Prediction</th>
+          <th>New Prediction</th>
+          <th>Changed By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr {% if log.old_goals1 is not none %}class="row-update"{% endif %}>
+            <td><small>{{ to_local(log.changed_at).strftime('%d %b %Y %H:%M:%S') }}</small></td>
+            <td>{{ log.user.username }}</td>
+            <td>
+              <a href="/matches/{{ log.match_id }}">
+                {{ log.match.team1_name }} vs {{ log.match.team2_name }}
+              </a>
+              <small class="phase-tag">{{ log.match.phase.name }}</small>
+            </td>
+            <td>
+              {% if log.old_goals1 is not none %}
+                <span class="old-value">{{ log.old_goals1 }}:{{ log.old_goals2 }}</span>
+              {% else %}
+                <span class="create-tag">NEW</span>
+              {% endif %}
+            </td>
+            <td><strong>{{ log.new_goals1 }}:{{ log.new_goals2 }}</strong></td>
+            <td>{{ log.changed_by_user.username }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="empty-state">No prediction changes logged yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="help-text">Showing last 1000 entries. {% if filter_user_id or filter_match_id %}(filtered){% endif %}</p>
+</section>
+{% endblock %}
