@@ -730,8 +730,22 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 680px) {
   .nav-links { display: none; }
   .hamburger { display: block; margin-left: auto; }
-  .match-card { grid-template-columns: 90px 1fr; }
-  .match-card-pred { display: none; }
+
+  .match-card {
+    grid-template-columns: 80px 1fr;
+    grid-template-rows: auto auto;
+    gap: .35rem .5rem;
+  }
+  .match-card-kickoff { grid-column: 1; grid-row: 1; font-size: .8rem; }
+  .match-card-teams   { grid-column: 2; grid-row: 1; }
+  .match-card-pred    {
+    grid-column: 2; grid-row: 2;
+    text-align: right;
+    display: block;
+    font-size: .82rem;
+    padding-bottom: .1rem;
+  }
+
   .hide-sm { display: none; }
   .profile-stats .stat-card { min-width: 80px; }
   .stat-bar-row { grid-template-columns: 90px 1fr 30px; }
