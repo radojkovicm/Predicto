@@ -29,7 +29,7 @@
     <div class="form-row">
       <div class="form-group">
         <label>Team 1 Code</label>
-        <input type="text" name="team1_code" maxlength="5" required value="{{ match.team1_code }}">
+        <input type="text" name="team1_code" maxlength="10" required value="{{ match.team1_code }}">
       </div>
       <div class="form-group">
         <label>Team 1 Name</label>
@@ -37,14 +37,19 @@
       </div>
       <div class="form-group">
         <label>Team 2 Code</label>
-        <input type="text" name="team2_code" maxlength="5" required value="{{ match.team2_code }}">
+        <input type="text" name="team2_code" maxlength="10" required value="{{ match.team2_code }}">
       </div>
       <div class="form-group">
         <label>Team 2 Name</label>
         <input type="text" name="team2_name" maxlength="50" required value="{{ match.team2_name }}">
       </div>
     </div>
-    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <div style="display:flex;gap:.75rem">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <form method="post" action="/admin/matches/{{ match.id }}/delete" style="display:inline" onsubmit="return confirm('Delete {{ match.team1_name }} vs {{ match.team2_name }}?')">
+        <button type="submit" class="btn btn-danger">Delete Match</button>
+      </form>
+    </div>
   </form>
 </section>
 {% endblock %}

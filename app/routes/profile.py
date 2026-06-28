@@ -56,9 +56,10 @@ async def user_profile(
         .all()
     )
 
-    # Show personal badges + badges for active league
+    # Show personal badges + badges for active league (only ACTIVE ones)
     badges_query = db.query(UserBadge).options(joinedload(UserBadge.match), joinedload(UserBadge.league)).filter(
-        UserBadge.user_id == user_id
+        UserBadge.user_id == user_id,
+        UserBadge.is_active == True,
     )
     if active_league:
         from sqlalchemy import or_

@@ -43,7 +43,7 @@
     <div class="stat-name">Predictions</div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ badges | length }}</div>
+    <div class="stat-value">{{ badges | selectattr('is_active') | list | length }}</div>
     <div class="stat-name">Badges</div>
   </div>
 </div>
@@ -56,18 +56,20 @@
     </h3>
     <div class="badge-list">
       {% for ub in badges %}
-        {% set name, emoji = badge_display(ub.badge_code) %}
-        <div class="badge-item">
-          <span class="badge-emoji">{{ emoji }}</span>
-          <div class="badge-info">
-            <strong>{{ name }}</strong>
-            <small>
-              {{ ub.awarded_at.strftime('%d %b %Y') }}
-              {% if ub.match %}· {{ ub.match.team1_name }} vs {{ ub.match.team2_name }}{% endif %}
-              {% if ub.league %}· <em>{{ ub.league.name }}</em>{% endif %}
-            </small>
+        {% if ub.is_active %}
+          {% set name, emoji = badge_display(ub.badge_code) %}
+          <div class="badge-item{% if ub.badge_code == 'iron_man' %} hidden{% endif %}">
+            <span class="badge-emoji">{{ emoji }}</span>
+            <div class="badge-info">
+              <strong>{{ name }}</strong>
+              <small>
+                {{ ub.awarded_at.strftime('%d %b %Y') }}
+                {% if ub.match %}· {{ ub.match.team1_name }} vs {{ ub.match.team2_name }}{% endif %}
+                {% if ub.league %}· <em>{{ ub.league.name }}</em>{% endif %}
+              </small>
+            </div>
           </div>
-        </div>
+        {% endif %}
       {% endfor %}
     </div>
   </section>

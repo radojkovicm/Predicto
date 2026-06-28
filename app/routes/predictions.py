@@ -41,8 +41,9 @@ async def save_prediction(
         prediction_service.save_prediction(
             db, current_user, match, pred_goals1, pred_goals2, is_joker
         )
-        flash(request, "Prediction saved!", "success")
+        flash(request, "✅ Prediction saved!", "success")
     except ValueError as e:
         flash(request, str(e), "error")
+        return RedirectResponse(f"/matches/{match_id}", status_code=302)
 
-    return RedirectResponse(f"/matches/{match_id}", status_code=302)
+    return RedirectResponse("/matches", status_code=302)

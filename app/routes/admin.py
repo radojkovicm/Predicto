@@ -216,6 +216,30 @@ async def unlock_user(
     return RedirectResponse("/admin/users", status_code=302)
 
 
+@router.post("/users/{user_id}/delete")
+async def delete_user(
+    user_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        flash(request, "User not found.", "error")
+        return RedirectResponse("/admin/users", status_code=302)
+
+    username = user.username
+    db.query(PredictionLog).filter(PredictionLog.user_id == user_id).delete()
+    db.query(Prediction).filter(Prediction.user_id == user_id).delete()
+    from app.models.models import UserBadge
+    db.query(UserBadge).filter(UserBadge.user_id == user_id).delete()
+    db.query(UserLeague).filter(UserLeague.user_id == user_id).delete()
+    db.delete(user)
+    db.commit()
+    flash(request, f"User '{username}' deleted completely.", "success")
+    return RedirectResponse("/admin/users", status_code=302)
+
+
 # ---------------------------------------------------------------------------
 # Matches
 # ---------------------------------------------------------------------------
@@ -367,6 +391,28 @@ async def edit_match(
         flash(request, "Match updated.", "success")
     except Exception as e:
         flash(request, f"Error: {e}", "error")
+    return RedirectResponse("/admin/matches", status_code=302)
+
+
+@router.post("/matches/{match_id}/delete")
+async def delete_match(
+    match_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        flash(request, "Match not found.", "error")
+        return RedirectResponse("/admin/matches", status_code=302)
+
+    match_desc = f"{match.team1_name} vs {match.team2_name}"
+    db.query(PredictionLog).filter(PredictionLog.match_id == match_id).delete()
+    db.query(ResultLog).filter(ResultLog.match_id == match_id).delete()
+    db.query(Prediction).filter(Prediction.match_id == match_id).delete()
+    db.delete(match)
+    db.commit()
+    flash(request, f"Match '{match_desc}' deleted.", "success")
     return RedirectResponse("/admin/matches", status_code=302)
 
 
@@ -576,4 +622,75 @@ async def league_remove_user(
     ).delete()
     db.commit()
     flash(request, "User removed from league.", "success")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
+@router.get("/leagues/{league_id}/edit")
+async def league_edit_form(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    league = db.query(League).filter(League.id == league_id).first()
+    if not league:
+        return RedirectResponse("/admin/leagues", status_code=302)
+    return templates.TemplateResponse(
+        "admin/league_edit.html",
+        {
+            "request": request,
+            "current_user": admin_user,
+            "flashes": get_flashes(request),
+            "league": league,
+        },
+    )
+
+
+@router.post("/leagues/{league_id}/edit")
+async def edit_league(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    league = db.query(League).filter(League.id == league_id).first()
+    if not league:
+        flash(request, "League not found.", "error")
+        return RedirectResponse("/admin/leagues", status_code=302)
+
+    form = await request.form()
+    new_name = str(form.get("name", "")).strip()
+    if not new_name:
+        flash(request, "League name is required.", "error")
+        return RedirectResponse("/admin/leagues", status_code=302)
+
+    if new_name != league.name and db.query(League).filter(League.name == new_name).first():
+        flash(request, f"League '{new_name}' already exists.", "error")
+        return RedirectResponse("/admin/leagues", status_code=302)
+
+    league.name = new_name
+    db.commit()
+    flash(request, f"League renamed to '{new_name}'.", "success")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
+@router.post("/leagues/{league_id}/delete")
+async def delete_league(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    league = db.query(League).filter(League.id == league_id).first()
+    if not league:
+        flash(request, "League not found.", "error")
+        return RedirectResponse("/admin/leagues", status_code=302)
+
+    league_name = league.name
+    from app.models.models import UserBadge
+    db.query(UserBadge).filter(UserBadge.league_id == league_id).delete()
+    db.query(UserLeague).filter(UserLeague.league_id == league_id).delete()
+    db.delete(league)
+    db.commit()
+    flash(request, f"League '{league_name}' deleted. Users remain registered.", "success")
     return RedirectResponse("/admin/leagues", status_code=302)

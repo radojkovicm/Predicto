@@ -20,8 +20,11 @@
   {% for league in leagues %}
     <section class="card">
       <div class="league-card-header">
-        <h3>🏆 {{ league.name }}</h3>
-        <small class="text-muted">{{ member_map[league.id] | length }} member(s)</small>
+        <div>
+          <h3>🏆 {{ league.name }}</h3>
+          <small class="text-muted">{{ member_map[league.id] | length }} member(s)</small>
+        </div>
+        <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
       </div>
 
       <!-- Add user to league -->

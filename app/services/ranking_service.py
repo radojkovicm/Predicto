@@ -62,10 +62,12 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
     )
 
     # Badges: personal (league_id IS NULL) + this league's badges
+    # Filter to show only ACTIVE badges
     all_badges = (
         db.query(UserBadge.user_id, UserBadge.badge_code)
         .filter(
             UserBadge.user_id.in_(member_ids),
+            UserBadge.is_active == True,
             or_(UserBadge.league_id == league_id, UserBadge.league_id == None),
         )
         .all()

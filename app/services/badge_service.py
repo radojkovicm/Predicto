@@ -2,14 +2,24 @@
 
 Personal badges (league_id=None):  prophet, hot_streak, joker_master, joker_victim, iron_man
 League badges   (league_id=X):     lone_wolf, sheep, comeback_king, group_stage_guru
+
+Badge lifecycle:
+- Badges are awarded when conditions are met
+- Old badges (> BADGE_LIFETIME_DAYS) are deactivated (not deleted, preserved in audit trail)
+- Only active badges are displayed to users
 """
 from collections import Counter
 from typing import Optional
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.models.models import League, Match, Prediction, User, UserBadge, UserLeague
 from app.services.scoring_service import get_outcome, Outcome
+
+# How many days a badge remains active before being deactivated
+# (3 days = ~10 matches cycle)
+BADGE_LIFETIME_DAYS = 3
 
 GROUP_PHASE_ORDER_INDICES = {1, 2, 3}
 
@@ -60,12 +70,35 @@ def _award(
 # Main entry point called from result_service
 # ---------------------------------------------------------------------------
 
+def _deactivate_old_badges(db: Session) -> None:
+    """Deactivate badges older than BADGE_LIFETIME_DAYS (default: 4 days).
+    
+    This keeps the audit trail intact while removing old badges from display.
+    """
+    cutoff_date = datetime.utcnow() - timedelta(days=BADGE_LIFETIME_DAYS)
+    old_badges = (
+        db.query(UserBadge)
+        .filter(
+            UserBadge.is_active == True,
+            UserBadge.awarded_at < cutoff_date,
+        )
+        .all()
+    )
+    for badge in old_badges:
+        badge.is_active = False
+    if old_badges:
+        db.flush()
+
+
 def evaluate_badges_after_result(
     db: Session,
     match: Match,
     predictions: list[Prediction],
     old_positions_by_league: dict[int, dict[int, int]],
 ) -> None:
+    # Deactivate old badges before awarding new ones
+    _deactivate_old_badges(db)
+    
     res1 = match.result_goals1
     res2 = match.result_goals2
     if res1 is None or res2 is None:

@@ -169,6 +169,7 @@ class UserBadge(Base):
     # set  = league-specific badge (lone_wolf, sheep, comeback_king, group_stage_guru)
     league_id = Column(Integer, ForeignKey("leagues.id"), nullable=True)
     awarded_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True, nullable=False, server_default="true")
 
     user = relationship("User", back_populates="badges")
     match = relationship("Match", back_populates="badges")

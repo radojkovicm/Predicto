@@ -16,7 +16,7 @@
       <a href="/admin/leagues" {% if request.url.path == '/admin/leagues' %}class="active"{% endif %}>Leagues</a>
       <a href="/admin/log"     {% if request.url.path == '/admin/log'     %}class="active"{% endif %}>Result Log</a>
       <a href="/admin/prediction-log" {% if request.url.path == '/admin/prediction-log' %}class="active"{% endif %}>Pred. Log</a>
-      <a href="/matches">← App</a>
+      <a href="/matches" target="_self">← App</a>
       <form action="/logout" method="post" style="display:inline">
         <button type="submit" class="btn-link">Logout</button>
       </form>

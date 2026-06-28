@@ -36,6 +36,9 @@
     <div style="display:flex;gap:.75rem;flex-wrap:wrap">
       <button type="submit" class="btn btn-primary">Save Changes</button>
       <a href="/admin/users" class="btn btn-secondary">Cancel</a>
+      <form method="post" action="/admin/users/{{ user.id }}/delete" style="display:inline" onsubmit="return confirm('Permanently delete {{ user.display_name }} and all their data?')">
+        <button type="submit" class="btn btn-danger">Delete User</button>
+      </form>
     </div>
   </form>
 </section>

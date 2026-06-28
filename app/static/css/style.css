@@ -60,6 +60,8 @@ a:hover { text-decoration: underline; }
 
 img { max-width: 100%; height: auto; }
 
+.hidden { display: none !important; }
+
 /* ============================================================
    Layout
    ============================================================ */
@@ -192,6 +194,8 @@ img { max-width: 100%; height: auto; }
 .btn-link     { background: none; border: none; color: var(--primary); cursor: pointer; font-size: inherit; padding: 0; }
 .btn-full     { width: 100%; }
 .btn-sm       { padding: .3rem .7rem; font-size: .85rem; }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #b91c1c; color: #fff; }
 
 /* ============================================================
    Cards

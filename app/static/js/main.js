@@ -23,6 +23,17 @@
   });
 })();
 
+// Delete confirmation
+window.confirmDelete = function (title, actionUrl) {
+  if (confirm(title)) {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = actionUrl;
+    document.body.appendChild(form);
+    form.submit();
+  }
+};
+
 // Mobile hamburger menu
 (function () {
   document.addEventListener("click", function (e) {
