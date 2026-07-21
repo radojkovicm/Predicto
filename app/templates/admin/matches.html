@@ -31,9 +31,32 @@
   </form>
 </section>
 
+<!-- Competition selector -->
+<section class="card filter-card">
+  {% if competitions %}
+    <form method="get" action="/admin/matches" class="filter-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Competition <small>(controls which phases you can pick when creating a match)</small></label>
+          <select name="competition_id" onchange="this.form.submit()">
+            {% for c in competitions %}
+              <option value="{{ c.id }}" {% if selected_competition and c.id == selected_competition.id %}selected{% endif %}>
+                {{ c.name }} ({{ c.status }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </form>
+  {% else %}
+    <p class="empty-state">No competitions yet. <a href="/admin/competitions/new">Create one first</a>.</p>
+  {% endif %}
+</section>
+
 <!-- Create match -->
 <section class="card">
   <h3>Create Match <small style="font-weight:400;color:var(--text-muted)">(new matches are hidden by default)</small></h3>
+  {% if phases %}
   <form method="post" action="/admin/matches" class="match-form">
     <div class="form-row">
       <div class="form-group">
@@ -69,6 +92,9 @@
     </div>
     <button type="submit" class="btn btn-primary">Create Match</button>
   </form>
+  {% elif selected_competition %}
+    <p class="empty-state">No phases in {{ selected_competition.name }} yet. Add one from the <a href="/admin/competitions/{{ selected_competition.id }}/edit">Competition editor</a> first.</p>
+  {% endif %}
 </section>
 
 <!-- Match list -->

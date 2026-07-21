@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, text
+    Boolean, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, text
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
@@ -10,15 +10,42 @@ class Base(DeclarativeBase):
     pass
 
 
+class Competition(Base):
+    __tablename__ = "competitions"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    status = Column(String(20), nullable=False, default="draft", server_default="'draft'")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    points_outcome = Column(Integer, nullable=False, default=10, server_default="10")
+    points_goal_diff = Column(Integer, nullable=False, default=7, server_default="7")
+    points_goal_home = Column(Integer, nullable=False, default=4, server_default="4")
+    points_goal_away = Column(Integer, nullable=False, default=4, server_default="4")
+    joker_bonus = Column(Integer, nullable=False, default=8, server_default="8")
+    joker_penalty = Column(Integer, nullable=False, default=-5, server_default="-5")
+    jokers_per_phase = Column(Integer, nullable=False, default=1, server_default="1")
+
+    phases = relationship("Phase", back_populates="competition")
+    matches = relationship("Match", back_populates="competition")
+    leagues = relationship("League", back_populates="competition")
+
+
 class League(Base):
     __tablename__ = "leagues"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), unique=True, nullable=False)
+    name = Column(String(100), nullable=False)
     join_code = Column(String(20), unique=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=False)
 
     members = relationship("User", secondary="user_leagues", back_populates="leagues")
+    competition = relationship("Competition", back_populates="leagues")
+
+    __table_args__ = (
+        UniqueConstraint("name", "competition_id", name="uq_leagues_name_competition"),
+    )
 
 
 class UserLeague(Base):
@@ -63,7 +90,11 @@ class Phase(Base):
     name = Column(String(100), nullable=False)
     order_index = Column(Integer, nullable=False)
     joker_allowed = Column(Boolean, default=True, nullable=False, server_default="true")
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=False)
+    is_group_stage = Column(Boolean, default=False, nullable=False, server_default="false")
+    point_multiplier = Column(Numeric(4, 2), nullable=False, default=1.00, server_default="1.00")
 
+    competition = relationship("Competition", back_populates="phases")
     matches = relationship("Match", back_populates="phase", order_by="Match.kickoff_utc")
 
 
@@ -82,8 +113,10 @@ class Match(Base):
     is_finished = Column(Boolean, default=False, nullable=False, server_default="false")
     is_visible = Column(Boolean, default=False, nullable=False, server_default="false")
     finished_at = Column(DateTime(timezone=True), nullable=True)  # set when admin enters result
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=False)
 
     phase = relationship("Phase", back_populates="matches")
+    competition = relationship("Competition", back_populates="matches")
     predictions = relationship("Prediction", back_populates="match")
     result_logs = relationship("ResultLog", back_populates="match")
     prediction_logs = relationship("PredictionLog", back_populates="match")
@@ -170,11 +203,16 @@ class UserBadge(Base):
     league_id = Column(Integer, ForeignKey("leagues.id"), nullable=True)
     awarded_at = Column(DateTime(timezone=True), server_default=func.now())
     is_active = Column(Boolean, default=True, nullable=False, server_default="true")
+    competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=False)
 
     user = relationship("User", back_populates="badges")
     match = relationship("Match", back_populates="badges")
     league = relationship("League")
+    competition = relationship("Competition")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "badge_code", "match_id", "league_id", name="uq_user_badge"),
+        UniqueConstraint(
+            "user_id", "badge_code", "match_id", "league_id", "competition_id",
+            name="uq_user_badge",
+        ),
     )

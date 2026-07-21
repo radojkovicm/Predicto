@@ -172,6 +172,42 @@ def test_joker_false_no_penalty():
 
 
 # ---------------------------------------------------------------------------
+# Point multiplier
+#
+# point_multiplier scales the WHOLE match score — base + joker adjustment —
+# not just the base points. i.e. total = round(multiplier * (base + joker)),
+# never round(multiplier * base) + joker.
+# ---------------------------------------------------------------------------
+
+def test_multiplier_joker_hit_scales_whole_score():
+    """Exact score (base=25) + joker hit (+8), x2.0: round(2.0*(25+8)) = 66.
+
+    NOT round(2.0*25) + 8 == 58 (multiplier-on-base-only would be a bug)."""
+    assert compute_points(2, 1, 2, 1, is_joker=True, point_multiplier=2.0) == 66
+
+
+def test_multiplier_joker_miss_scales_whole_score():
+    """base=4 (goals1 correct only) + joker miss (-5), x2.0: round(2.0*(4-5)) = -2.
+
+    NOT round(2.0*4) - 5 == 3 (multiplier-on-base-only would be a bug)."""
+    # pred 2-0 (HOME), res 2-3 (AWAY): outcome wrong, GD wrong, goals1 correct only
+    assert compute_points(2, 0, 2, 3, is_joker=True, point_multiplier=2.0) == -2
+
+
+def test_multiplier_no_joker_exact_multiple():
+    """Non-joker, base=10 (correct tip only), x1.5: round(1.5*10) = 15, no rounding ambiguity."""
+    # pred 5-1 (HOME), res 2-0 (HOME): outcome same, GD/goals both differ
+    assert compute_points(5, 1, 2, 0, point_multiplier=1.5) == 15
+
+
+def test_multiplier_rounding_half_to_even():
+    """base=17 (tip + GD), x1.5: round(1.5*17) = round(25.5).
+
+    Python's round() uses banker's rounding (round-half-to-even), so this is 26, not 25."""
+    assert compute_points(1, 1, 2, 2, point_multiplier=1.5) == 26
+
+
+# ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
 

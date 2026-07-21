@@ -6,6 +6,9 @@
 *.db
 *.sqlite
 *.sqlite3
+*.dump
+/db_dump/*
+!/db_dump/.gitkeep
 
 # Python
 __pycache__/

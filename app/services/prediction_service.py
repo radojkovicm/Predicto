@@ -24,14 +24,17 @@ def save_prediction(
     if lock_service.is_locked(match):
         raise ValueError("This match is locked — predictions are closed.")
 
+    if match.competition.status == "finished":
+        raise ValueError("This competition has finished — predictions are closed.")
+
     existing = db.query(Prediction).filter(
         Prediction.user_id == user.id,
         Prediction.match_id == match.id,
     ).first()
 
     if is_joker:
-        # Check if user already used a joker in this phase (excluding this prediction)
-        joker_in_phase = (
+        # Count jokers already used by this user in this phase (excluding this prediction)
+        jokers_in_phase_query = (
             db.query(Prediction)
             .join(Match, Prediction.match_id == Match.id)
             .filter(
@@ -39,10 +42,13 @@ def save_prediction(
                 Match.phase_id == match.phase_id,
                 Prediction.is_joker == True,
             )
-            .first()
         )
-        # Allow if it's this very prediction's own joker (updating an existing joker)
-        if joker_in_phase and (existing is None or joker_in_phase.id != existing.id):
+        if existing is not None:
+            jokers_in_phase_query = jokers_in_phase_query.filter(Prediction.id != existing.id)
+        jokers_in_phase = jokers_in_phase_query.count()
+
+        jokers_per_phase = match.competition.jokers_per_phase
+        if jokers_in_phase >= jokers_per_phase:
             raise ValueError("You already used your joker for this phase.")
 
     now = datetime.now(timezone.utc)

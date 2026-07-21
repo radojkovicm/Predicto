@@ -9,10 +9,21 @@
 <!-- Create league -->
 <section class="card">
   <h3>Create League</h3>
-  <form method="post" action="/admin/leagues" class="inline-form">
-    <input type="text" name="name" placeholder="League name (e.g. Work, Friends)" required style="flex:1;min-width:200px">
-    <button type="submit" class="btn btn-primary">Create</button>
-  </form>
+  {% if competitions %}
+    <form method="post" action="/admin/leagues" class="inline-form">
+      <input type="text" name="name" placeholder="League name (e.g. Work, Friends)" required style="flex:1;min-width:200px">
+      <select name="competition_id" required>
+        {% for c in competitions %}
+          <option value="{{ c.id }}" {% if selected_competition and c.id == selected_competition.id %}selected{% endif %}>
+            {{ c.name }} ({{ c.status }})
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+  {% else %}
+    <p class="empty-state">No competitions yet. <a href="/admin/competitions/new">Create one first</a>.</p>
+  {% endif %}
 </section>
 
 <!-- League list -->
@@ -22,7 +33,7 @@
       <div class="league-card-header">
         <div>
           <h3>🏆 {{ league.name }}</h3>
-          <small class="text-muted">{{ member_map[league.id] | length }} member(s)</small>
+          <small class="text-muted">{{ member_map[league.id] | length }} member(s) · {{ league.competition.name }}</small>
         </div>
         <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
       </div>

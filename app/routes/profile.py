@@ -47,14 +47,15 @@ async def user_profile(
     # League context — use viewer's leagues for the tab switcher
     active_league, user_leagues = resolve_league(db, current_user.id, league_id)
 
-    predictions = (
+    predictions_query = (
         db.query(Prediction)
         .options(joinedload(Prediction.match).joinedload(Match.phase))
         .filter(Prediction.user_id == user_id)
         .join(Match)
-        .order_by(Match.kickoff_utc.desc())
-        .all()
     )
+    if active_league:
+        predictions_query = predictions_query.filter(Match.competition_id == active_league.competition_id)
+    predictions = predictions_query.order_by(Match.kickoff_utc.desc()).all()
 
     # Show personal badges + badges for active league (only ACTIVE ones)
     badges_query = db.query(UserBadge).options(joinedload(UserBadge.match), joinedload(UserBadge.league)).filter(

@@ -14,6 +14,8 @@
       <a href="/admin/matches" {% if request.url.path == '/admin/matches' %}class="active"{% endif %}>Matches</a>
       <a href="/admin/users"   {% if request.url.path == '/admin/users'   %}class="active"{% endif %}>Users</a>
       <a href="/admin/leagues" {% if request.url.path == '/admin/leagues' %}class="active"{% endif %}>Leagues</a>
+      <a href="/admin/competitions" {% if request.url.path.startswith('/admin/competitions') %}class="active"{% endif %}>Competitions</a>
+      <a href="/admin/archive" {% if request.url.path.startswith('/admin/archive') %}class="active"{% endif %}>Archive</a>
       <a href="/admin/log"     {% if request.url.path == '/admin/log'     %}class="active"{% endif %}>Result Log</a>
       <a href="/admin/prediction-log" {% if request.url.path == '/admin/prediction-log' %}class="active"{% endif %}>Pred. Log</a>
       <a href="/matches" target="_self">← App</a>
@@ -30,6 +32,8 @@
   <a href="/admin/matches">Matches</a>
   <a href="/admin/users">Users</a>
   <a href="/admin/leagues">Leagues</a>
+  <a href="/admin/competitions">Competitions</a>
+  <a href="/admin/archive">Archive</a>
   <a href="/admin/log">Result Log</a>
   <a href="/admin/prediction-log">Pred. Log</a>
   <a href="/matches">← App</a>

@@ -129,7 +129,7 @@ async def match_detail(
         Prediction.match_id == match_id,
     ).first()
 
-    joker_used_phase = (
+    jokers_used_in_phase_query = (
         db.query(Prediction)
         .join(Match, Prediction.match_id == Match.id)
         .filter(
@@ -137,10 +137,13 @@ async def match_detail(
             Match.phase_id == match.phase_id,
             Prediction.is_joker == True,
         )
-        .first()
     )
+    if user_pred is not None:
+        jokers_used_in_phase_query = jokers_used_in_phase_query.filter(Prediction.id != user_pred.id)
+    jokers_used_in_phase = jokers_used_in_phase_query.count()
+
     can_use_joker = match.phase.joker_allowed and (
-        joker_used_phase is None or (user_pred and user_pred.is_joker)
+        jokers_used_in_phase < match.competition.jokers_per_phase
     )
 
     # Resolve league context for stats

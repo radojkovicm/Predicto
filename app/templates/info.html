@@ -28,7 +28,11 @@
 
 <section class="card rules-card">
   <h3>🃏 Joker</h3>
-  <p>You have <strong>8 jokers</strong> total — exactly <strong>1 per phase</strong>. When you mark a prediction as a Joker:</p>
+  {% if jokers_per_phase is not none and phase_count is not none %}
+  <p>You have <strong>{{ jokers_per_phase * phase_count }} jokers</strong> total — exactly <strong>{{ jokers_per_phase }} per phase</strong>. When you mark a prediction as a Joker:</p>
+  {% else %}
+  <p>Joker rules depend on the current competition, which hasn't been set up yet. When you mark a prediction as a Joker:</p>
+  {% endif %}
   <table class="rules-table">
     <tbody>
       <tr><td>Joker hit (outcome correct)</td><td><strong>+8</strong> extra</td></tr>
@@ -62,7 +66,7 @@
     <thead><tr><th>Badge</th><th>How to earn it</th></tr></thead>
     <tbody>
       <tr><td>🔮 Prophet</td><td>Predict the exact score of a match</td></tr>
-      <tr><td>🔥 Hot Streak</td><td>3 consecutive matches each with ≥ 10 points</td></tr>
+      <tr><td>🔥 Hot Streak</td><td>4 consecutive matches each with ≥ 17 points</td></tr>
       <tr><td>🃏 Joker Master</td><td>Land a joker (outcome correct)</td></tr>
       <tr><td>💀 Joker Victim</td><td>Miss a joker (outcome wrong)</td></tr>
       <tr><td>🐺 Lone Wolf</td><td>Only player (or one of ≤1) to get the correct tip when ≥70% got it wrong</td></tr>

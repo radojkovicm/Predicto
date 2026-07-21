@@ -1,0 +1,130 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ 'Edit Competition' if competition else 'New Competition' }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/competitions" class="back-link">← Competitions</a>
+  <h2>{{ 'Edit Competition' if competition else 'New Competition' }}</h2>
+</div>
+
+<section class="card" style="max-width:600px">
+  {% if competition and competition.status == 'finished' %}
+    <p class="help-text">This competition is finished and is read-only history. See it in the <a href="/admin/archive/{{ competition.id }}">Archive</a>.</p>
+  {% else %}
+  <form method="post" action="{{ '/admin/competitions/%d/edit' % competition.id if competition else '/admin/competitions/new' }}" class="settings-form">
+    <div class="form-group">
+      <label>Competition Name</label>
+      <input type="text" name="name" required maxlength="100"
+             value="{{ competition.name if competition else '' }}" placeholder="World Cup 2030">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Points — Correct Outcome</label>
+        <input type="number" name="points_outcome" required value="{{ competition.points_outcome if competition else 10 }}">
+      </div>
+      <div class="form-group">
+        <label>Points — Correct Goal Diff</label>
+        <input type="number" name="points_goal_diff" required value="{{ competition.points_goal_diff if competition else 7 }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Points — Exact Home Goals</label>
+        <input type="number" name="points_goal_home" required value="{{ competition.points_goal_home if competition else 4 }}">
+      </div>
+      <div class="form-group">
+        <label>Points — Exact Away Goals</label>
+        <input type="number" name="points_goal_away" required value="{{ competition.points_goal_away if competition else 4 }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Joker Bonus</label>
+        <input type="number" name="joker_bonus" required value="{{ competition.joker_bonus if competition else 8 }}">
+      </div>
+      <div class="form-group">
+        <label>Joker Penalty</label>
+        <input type="number" name="joker_penalty" required value="{{ competition.joker_penalty if competition else -5 }}">
+      </div>
+      <div class="form-group">
+        <label>Jokers per Phase</label>
+        <input type="number" name="jokers_per_phase" required min="0" value="{{ competition.jokers_per_phase if competition else 1 }}">
+      </div>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary">{{ 'Save Changes' if competition else 'Create Competition' }}</button>
+      <a href="/admin/competitions" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+  {% endif %}
+</section>
+
+{% if competition %}
+<section class="card">
+  <h3>Phases <small style="font-weight:400;color:var(--text-muted)">({{ phases | length }})</small></h3>
+  {% if phases %}
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Joker Allowed</th>
+            <th>Group Stage</th>
+            <th>Point Multiplier</th>
+            <th>Matches</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for phase in phases %}
+            <tr>
+              <td>{{ phase.order_index }}</td>
+              <td>{{ phase.name }}</td>
+              <td>{{ '✅' if phase.joker_allowed else '—' }}</td>
+              <td>{{ '✅' if phase.is_group_stage else '—' }}</td>
+              <td>{{ phase.point_multiplier }}</td>
+              <td>{{ phase.matches | length }}</td>
+              <td class="action-cell">
+                <a href="/admin/competitions/{{ competition.id }}/phases/{{ phase.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">No phases yet.</p>
+  {% endif %}
+
+  {% if competition.status != 'finished' %}
+    <h4>Add Phase</h4>
+    <form method="post" action="/admin/competitions/{{ competition.id }}/phases" class="match-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Name</label>
+          <input type="text" name="name" required maxlength="100" placeholder="Group Stage">
+        </div>
+        <div class="form-group">
+          <label>Order</label>
+          <input type="number" name="order_index" required min="1" value="{{ (phases | length) + 1 }}">
+        </div>
+        <div class="form-group">
+          <label>Point Multiplier</label>
+          <input type="number" name="point_multiplier" step="0.01" required value="1.00">
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="checkbox-label">
+          <input type="checkbox" name="joker_allowed" value="1" checked> Joker Allowed
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_group_stage" value="1"> Group Stage
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Phase</button>
+    </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,7 +1,10 @@
 #!/usr/bin/env python
-"""Delete all existing matches and reimport from corrected CSV.
+"""Delete all existing matches (for one competition) and reimport from corrected CSV.
 Safe to run only if there are no real predictions yet.
+
+Usage: python scripts/reimport_matches.py --competition-id <id>
 """
+import argparse
 import csv, io, os, sys
 import pytz
 
@@ -9,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
 from app.db import SessionLocal
-from app.models.models import Match, Phase, Prediction, PredictionLog, ResultLog, UserBadge
+from app.models.models import Competition, Match, Phase, Prediction, PredictionLog, ResultLog, UserBadge
 
 TZ_LJU = pytz.timezone("Europe/Ljubljana")
 
@@ -95,28 +98,41 @@ def lju_to_utc(s: str) -> datetime:
     return TZ_LJU.localize(naive).astimezone(pytz.utc)
 
 
-def main():
+def main(competition_id: int):
     db = SessionLocal()
     try:
-        pred_count = db.query(Prediction).count()
+        competition = db.query(Competition).filter(Competition.id == competition_id).first()
+        if not competition:
+            print(f"Competition with id {competition_id} not found.")
+            sys.exit(1)
+
+        match_ids = db.query(Match.id).filter(Match.competition_id == competition.id)
+
+        pred_count = db.query(Prediction).filter(Prediction.match_id.in_(match_ids)).count()
         if pred_count > 0:
             answer = input(
-                f"WARNING: {pred_count} prediction(s) exist and will be deleted. Continue? [y/N]: "
+                f"WARNING: {pred_count} prediction(s) exist for competition "
+                f"'{competition.name}' (id={competition.id}) and will be deleted. Continue? [y/N]: "
             ).strip().lower()
             if answer != "y":
                 print("Aborted.")
                 return
 
-        print("Deleting all match-related data...")
-        db.query(PredictionLog).delete(synchronize_session=False)
-        db.query(UserBadge).filter(UserBadge.match_id.isnot(None)).delete(synchronize_session=False)
-        db.query(ResultLog).delete(synchronize_session=False)
-        db.query(Prediction).delete(synchronize_session=False)
-        db.query(Match).delete(synchronize_session=False)
+        print(f"Deleting all match-related data for competition '{competition.name}'...")
+        db.query(PredictionLog).filter(PredictionLog.match_id.in_(match_ids)).delete(synchronize_session=False)
+        db.query(UserBadge).filter(
+            UserBadge.match_id.isnot(None), UserBadge.match_id.in_(match_ids)
+        ).delete(synchronize_session=False)
+        db.query(ResultLog).filter(ResultLog.match_id.in_(match_ids)).delete(synchronize_session=False)
+        db.query(Prediction).filter(Prediction.match_id.in_(match_ids)).delete(synchronize_session=False)
+        db.query(Match).filter(Match.competition_id == competition.id).delete(synchronize_session=False)
         db.commit()
         print("Cleared.")
 
-        phases = {p.name: p.id for p in db.query(Phase).all()}
+        phases = {
+            p.name: p.id
+            for p in db.query(Phase).filter(Phase.competition_id == competition.id).all()
+        }
         reader = csv.DictReader(io.StringIO(CSV_DATA.strip()))
         count = 0
         for row in reader:
@@ -126,6 +142,7 @@ def main():
                 continue
             db.add(Match(
                 phase_id=phase_id,
+                competition_id=competition.id,
                 team1_code=row["team1_code"].strip(),
                 team1_name=row["team1_name"].strip(),
                 team2_code=row["team2_code"].strip(),
@@ -141,4 +158,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--competition-id", type=int, required=True, help="ID of the competition to reimport matches for")
+    args = parser.parse_args()
+    main(args.competition_id)
