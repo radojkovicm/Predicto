@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join {{ league.name }} — Predicto 2026</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="login-page">
+<div class="login-wrapper">
+  <div class="login-card">
+    <div class="login-header">
+      <span class="login-logo">⚽</span>
+      <h1>Predicto 2026</h1>
+      <p>You're joining: <strong>{{ league.name }}</strong></p>
+    </div>
+
+    {% for f in flashes %}
+      <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+    {% endfor %}
+
+    <form method="post" action="/join/{{ code }}" class="login-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="first_name">First Name</label>
+          <input type="text" id="first_name" name="first_name" maxlength="80" placeholder="Marko">
+        </div>
+        <div class="form-group">
+          <label for="last_name">Last Name</label>
+          <input type="text" id="last_name" name="last_name" maxlength="80" placeholder="Petrović">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username"
+               autofocus required placeholder="pick a username">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="new-password"
+               required minlength="6" placeholder="min 6 characters">
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Request to Join</button>
+    </form>
+    <p class="help-text" style="text-align:center;margin-top:.75rem">
+      An admin needs to approve your request before you can log in.
+    </p>
+  </div>
+</div>
+<button id="theme-toggle" class="btn-icon theme-toggle-login" aria-label="Toggle dark mode">🌙</button>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

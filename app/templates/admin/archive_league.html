@@ -17,7 +17,6 @@
           <th title="Total points">Pts</th>
           <th title="Correct tips" class="hide-sm">Tips</th>
           <th title="Exact scores" class="hide-sm">Exact</th>
-          <th>Badges</th>
           <th title="Joker Master / Joker Victim">Jokers</th>
         </tr>
       </thead>
@@ -35,14 +34,6 @@
             <td class="points-cell"><strong>{{ entry.total_points }}</strong></td>
             <td class="hide-sm">{{ entry.correct_tips }}</td>
             <td class="hide-sm">{{ entry.exact_scores }}</td>
-            <td class="badges-cell">
-              {% for b in badges_by_user.get(entry.user_id, []) %}
-                {% set name, emoji = badge_display(b.badge_code) %}
-                <span class="badge-icon" title="{{ name }}">{{ emoji }}</span>
-              {% else %}
-                <span style="color:var(--text-muted);font-size:.85rem">—</span>
-              {% endfor %}
-            </td>
             <td>
               <small>🃏 {{ joker_stats[entry.user_id].joker_master }} · 💀 {{ joker_stats[entry.user_id].joker_victim }}</small>
             </td>

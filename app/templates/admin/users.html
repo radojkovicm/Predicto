@@ -6,6 +6,49 @@
   <h2>User Management</h2>
 </div>
 
+{% set pending_users = users | selectattr('is_approved', 'equalto', false) | list %}
+{% if pending_users %}
+<section class="card">
+  <h3>⏳ Pending Approval ({{ pending_users | length }})</h3>
+  <p class="help-text">These people signed up through a league invite link and are waiting to be let in.</p>
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Username</th>
+          <th>Requested League</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in pending_users %}
+          <tr>
+            <td>{{ user.display_name }}</td>
+            <td>@{{ user.username }}</td>
+            <td>
+              {% set user_lids = user_league_map.get(user.id, []) %}
+              {% for league in leagues %}
+                {% if league.id in user_lids %}<span class="league-tag">{{ league.name }}</span>{% endif %}
+              {% endfor %}
+            </td>
+            <td class="action-cell">
+              <form method="post" action="/admin/users/{{ user.id }}/approve" style="display:inline">
+                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+              </form>
+              <form method="post" action="/admin/users/{{ user.id }}/delete" style="display:inline"
+                    onsubmit="return confirm('Reject and delete the signup request from {{ user.username }}?')">
+                <button type="submit" class="btn btn-sm btn-danger-outline">Reject</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <!-- Create user -->
 <section class="card">
   <h3>Create User</h3>
@@ -73,7 +116,10 @@
                 <br><small style="color:var(--text-muted)">@{{ user.username }}</small>
               {% endif %}
             </td>
-            <td>{{ '👑 Admin' if user.is_admin else 'User' }}</td>
+            <td>
+              {{ '👑 Admin' if user.is_admin else 'User' }}
+              {% if not user.is_approved %}<br><small class="admin-tag">⏳ pending</small>{% endif %}
+            </td>
             <td>
               {% set user_lids = user_league_map.get(user.id, []) %}
               {% if user_lids %}

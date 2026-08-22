@@ -46,7 +46,11 @@
               {% endif %}
               {% if competition.status == 'active' %}
                 <button type="button" class="btn btn-sm btn-danger"
-                        onclick="confirmDelete('Finish {{ competition.name }}? This locks it as read-only history and cannot be undone.', '/admin/competitions/{{ competition.id }}/finish')">Finish</button>
+                        onclick="confirmDelete('Finish {{ competition.name }}? It becomes read-only history and its matches/predictions are hidden from users (can be reopened later).', '/admin/competitions/{{ competition.id }}/finish')">Finish</button>
+              {% endif %}
+              {% if competition.status == 'finished' %}
+                <button type="button" class="btn btn-sm btn-secondary"
+                        onclick="confirmDelete('Reopen {{ competition.name }}? It becomes live again and visible to all users.', '/admin/competitions/{{ competition.id }}/reopen')">Reopen</button>
               {% endif %}
             </td>
           </tr>

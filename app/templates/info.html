@@ -13,11 +13,11 @@
   <table class="rules-table">
     <thead><tr><th>What you get right</th><th>Points</th></tr></thead>
     <tbody>
-      <tr><td>Correct outcome (Home / Draw / Away)</td><td><strong>+10</strong></td></tr>
-      <tr><td>Correct goal difference (e.g. both predict +2)</td><td><strong>+7</strong></td></tr>
-      <tr><td>Correct goals for Team 1</td><td><strong>+4</strong></td></tr>
-      <tr><td>Correct goals for Team 2</td><td><strong>+4</strong></td></tr>
-      <tr class="highlight-row"><td>Perfect prediction (exact score)</td><td><strong>25 max</strong></td></tr>
+      <tr><td>Correct outcome (Home / Draw / Away)</td><td><strong>+{{ points_outcome }}</strong></td></tr>
+      <tr><td>Correct goal difference (e.g. both predict +2)</td><td><strong>+{{ points_goal_diff }}</strong></td></tr>
+      <tr><td>Correct goals for Team 1</td><td><strong>+{{ points_goal_home }}</strong></td></tr>
+      <tr><td>Correct goals for Team 2</td><td><strong>+{{ points_goal_away }}</strong></td></tr>
+      <tr class="highlight-row"><td>Perfect prediction (exact score)</td><td><strong>{{ max_base }} max</strong></td></tr>
     </tbody>
   </table>
 
@@ -25,6 +25,22 @@
     ⚠️ Note: if the goal difference is correct, the outcome is automatically also correct, so those two always stack together.
   </div>
 </section>
+
+{% if has_multiplier %}
+<section class="card rules-card">
+  <h3>📈 Points Increase by Phase</h3>
+  <p>Points aren't worth the same all tournament — the further you go, the more each match counts. Everything above (and your joker) is multiplied by the phase's factor:</p>
+  <table class="rules-table">
+    <thead><tr><th>Phase</th><th>Multiplier</th></tr></thead>
+    <tbody>
+      {% for phase in phases %}
+        <tr><td>{{ phase.name }}</td><td><strong>×{{ phase.point_multiplier }}</strong></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="rule-note">e.g. a perfect prediction with a joker hit in a phase with a ×2 multiplier = <strong>{{ max_with_joker * 2 }} points</strong> instead of {{ max_with_joker }}.</p>
+</section>
+{% endif %}
 
 <section class="card rules-card">
   <h3>🃏 Joker</h3>
@@ -35,11 +51,11 @@
   {% endif %}
   <table class="rules-table">
     <tbody>
-      <tr><td>Joker hit (outcome correct)</td><td><strong>+8</strong> extra</td></tr>
-      <tr><td>Joker miss (outcome wrong)</td><td><strong>−5</strong> penalty</td></tr>
+      <tr><td>Joker hit (outcome correct)</td><td><strong>+{{ joker_bonus }}</strong> extra</td></tr>
+      <tr><td>Joker miss (outcome wrong)</td><td><strong>{{ joker_penalty }}</strong> penalty</td></tr>
     </tbody>
   </table>
-  <p>A perfect prediction with a joker hit = <strong>33 points</strong>.</p>
+  <p>A perfect prediction with a joker hit = <strong>{{ max_with_joker }} points</strong>.</p>
   <p>A joker miss can make your total negative for that match!</p>
 </section>
 

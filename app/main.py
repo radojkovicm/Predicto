@@ -9,7 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from config.config import settings
 from app.auth.deps import NeedsLoginException, NeedsAdminException
-from app.routes import auth, info, integration, matches, predictions, profile, ranking
+from app.routes import auth, info, integration, join, matches, predictions, profile, ranking
 from app.routes import settings as settings_routes
 from app.routes import admin as admin_routes
 
@@ -43,6 +43,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Routes
 app.include_router(auth.router)
+app.include_router(join.router)
 app.include_router(matches.router)
 app.include_router(predictions.router)
 app.include_router(ranking.router)

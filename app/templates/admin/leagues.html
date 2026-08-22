@@ -38,6 +38,27 @@
         <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
       </div>
 
+      <!-- Invite link -->
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label>Invite Link <small style="font-weight:400;color:var(--text-muted)">(share it — people sign themselves up, pending your approval)</small></label>
+        {% if league.join_code %}
+          <div class="inline-form">
+            <input type="text" readonly value="{{ request.base_url }}join/{{ league.join_code }}" style="flex:1;min-width:200px" onclick="this.select()">
+            <form method="post" action="/admin/leagues/{{ league.id }}/generate-invite" style="display:inline">
+              <button type="submit" class="btn btn-sm btn-secondary">Regenerate</button>
+            </form>
+            <form method="post" action="/admin/leagues/{{ league.id }}/revoke-invite" style="display:inline"
+                  onsubmit="return confirm('Revoke the invite link for {{ league.name }}? The current link will stop working.')">
+              <button type="submit" class="btn btn-sm btn-danger-outline">Revoke</button>
+            </form>
+          </div>
+        {% else %}
+          <form method="post" action="/admin/leagues/{{ league.id }}/generate-invite">
+            <button type="submit" class="btn btn-sm btn-primary">Generate Invite Link</button>
+          </form>
+        {% endif %}
+      </div>
+
       <!-- Add user to league -->
       <form method="post" action="/admin/leagues/{{ league.id }}/add-user" class="inline-form" style="margin-bottom:.75rem">
         <select name="user_id" required>

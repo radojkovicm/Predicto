@@ -47,27 +47,34 @@ async def user_profile(
     # League context — use viewer's leagues for the tab switcher
     active_league, user_leagues = resolve_league(db, current_user.id, league_id)
 
-    predictions_query = (
-        db.query(Prediction)
-        .options(joinedload(Prediction.match).joinedload(Match.phase))
-        .filter(Prediction.user_id == user_id)
-        .join(Match)
-    )
+    # No active_league means the viewer has no live competition context (e.g. right
+    # after a competition finished and before the next one starts) — show nothing
+    # rather than falling back to unscoped history from a finished competition.
+    predictions = []
+    badges = []
     if active_league:
-        predictions_query = predictions_query.filter(Match.competition_id == active_league.competition_id)
-    predictions = predictions_query.order_by(Match.kickoff_utc.desc()).all()
-
-    # Show personal badges + badges for active league (only ACTIVE ones)
-    badges_query = db.query(UserBadge).options(joinedload(UserBadge.match), joinedload(UserBadge.league)).filter(
-        UserBadge.user_id == user_id,
-        UserBadge.is_active == True,
-    )
-    if active_league:
-        from sqlalchemy import or_
-        badges_query = badges_query.filter(
-            or_(UserBadge.league_id == active_league.id, UserBadge.league_id == None)
+        predictions = (
+            db.query(Prediction)
+            .options(joinedload(Prediction.match).joinedload(Match.phase))
+            .filter(Prediction.user_id == user_id)
+            .join(Match)
+            .filter(Match.competition_id == active_league.competition_id)
+            .order_by(Match.kickoff_utc.desc())
+            .all()
         )
-    badges = badges_query.order_by(UserBadge.awarded_at.desc()).all()
+
+        from sqlalchemy import or_
+        badges = (
+            db.query(UserBadge)
+            .options(joinedload(UserBadge.match), joinedload(UserBadge.league))
+            .filter(
+                UserBadge.user_id == user_id,
+                UserBadge.is_active == True,
+                or_(UserBadge.league_id == active_league.id, UserBadge.league_id == None),
+            )
+            .order_by(UserBadge.awarded_at.desc())
+            .all()
+        )
 
     total_points = sum(p.points for p in predictions if p.points is not None)
 

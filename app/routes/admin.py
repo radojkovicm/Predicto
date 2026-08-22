@@ -243,6 +243,23 @@ async def unlock_user(
     return RedirectResponse("/admin/users", status_code=302)
 
 
+@router.post("/users/{user_id}/approve")
+async def approve_user(
+    user_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        flash(request, "User not found.", "error")
+    else:
+        user.is_approved = True
+        db.commit()
+        flash(request, f"'{user.username}' approved — they can now log in.", "success")
+    return RedirectResponse("/admin/users", status_code=302)
+
+
 @router.post("/users/{user_id}/delete")
 async def delete_user(
     user_id: int,
@@ -691,6 +708,47 @@ async def league_remove_user(
     return RedirectResponse("/admin/leagues", status_code=302)
 
 
+@router.post("/leagues/{league_id}/generate-invite")
+async def league_generate_invite(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    import secrets
+
+    league = db.query(League).filter(League.id == league_id).first()
+    if not league:
+        flash(request, "League not found.", "error")
+        return RedirectResponse("/admin/leagues", status_code=302)
+
+    for _ in range(10):
+        code = secrets.token_urlsafe(6)
+        if not db.query(League).filter(League.join_code == code).first():
+            league.join_code = code
+            db.commit()
+            flash(request, f"Invite link generated for '{league.name}'.", "success")
+            break
+    else:
+        flash(request, "Could not generate a unique invite code — try again.", "error")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
+@router.post("/leagues/{league_id}/revoke-invite")
+async def league_revoke_invite(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    league = db.query(League).filter(League.id == league_id).first()
+    if league:
+        league.join_code = None
+        db.commit()
+        flash(request, f"Invite link revoked for '{league.name}'.", "success")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
 @router.get("/leagues/{league_id}/edit")
 async def league_edit_form(
     league_id: int,
@@ -830,6 +888,7 @@ async def create_competition(
             joker_bonus=int(form.get("joker_bonus", 8)),
             joker_penalty=int(form.get("joker_penalty", -5)),
             jokers_per_phase=int(form.get("jokers_per_phase", 1)),
+            notes=str(form.get("notes", "")).strip() or None,
         )
         db.add(competition)
         db.commit()
@@ -902,6 +961,7 @@ async def edit_competition(
         competition.joker_bonus = int(form.get("joker_bonus", competition.joker_bonus))
         competition.joker_penalty = int(form.get("joker_penalty", competition.joker_penalty))
         competition.jokers_per_phase = int(form.get("jokers_per_phase", competition.jokers_per_phase))
+        competition.notes = str(form.get("notes", "")).strip() or None
         db.commit()
         flash(request, f"Competition '{new_name}' updated.", "success")
     except Exception as e:
@@ -962,6 +1022,41 @@ async def finish_competition(
     competition.finished_at = datetime.now(timezone.utc)
     db.commit()
     flash(request, f"Competition '{competition.name}' finished. It is now read-only history.", "success")
+    return RedirectResponse("/admin/competitions", status_code=302)
+
+
+@router.post("/competitions/{competition_id}/reopen")
+async def reopen_competition(
+    competition_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    competition = db.query(Competition).filter(Competition.id == competition_id).first()
+    if not competition:
+        flash(request, "Competition not found.", "error")
+        return RedirectResponse("/admin/competitions", status_code=302)
+    if competition.status != "finished":
+        flash(request, "Only finished competitions can be reopened.", "error")
+        return RedirectResponse("/admin/competitions", status_code=302)
+
+    other_active = (
+        db.query(Competition)
+        .filter(Competition.status == "active", Competition.id != competition_id)
+        .first()
+    )
+    if other_active:
+        flash(
+            request,
+            f"'{other_active.name}' is already active. Finish it before reopening another competition.",
+            "error",
+        )
+        return RedirectResponse("/admin/competitions", status_code=302)
+
+    competition.status = "active"
+    competition.finished_at = None
+    db.commit()
+    flash(request, f"Competition '{competition.name}' reopened — it is live again for all users.", "success")
     return RedirectResponse("/admin/competitions", status_code=302)
 
 

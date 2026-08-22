@@ -70,6 +70,10 @@ async def login_post(request: Request, db: Session = Depends(get_db)):
         flash(request, "Invalid username or password.", "error")
         return RedirectResponse("/login", status_code=302)
 
+    if not user.is_approved:
+        flash(request, "Your account is still waiting for admin approval.", "error")
+        return RedirectResponse("/login", status_code=302)
+
     # Successful login
     user.failed_login_attempts = 0
     user.locked_until = None

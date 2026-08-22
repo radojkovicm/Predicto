@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, UniqueConstraint, text
+    Boolean, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, text
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
@@ -25,6 +25,7 @@ class Competition(Base):
     joker_bonus = Column(Integer, nullable=False, default=8, server_default="8")
     joker_penalty = Column(Integer, nullable=False, default=-5, server_default="-5")
     jokers_per_phase = Column(Integer, nullable=False, default=1, server_default="1")
+    notes = Column(Text, nullable=True)
 
     phases = relationship("Phase", back_populates="competition")
     matches = relationship("Match", back_populates="competition")
@@ -67,6 +68,7 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     failed_login_attempts = Column(Integer, default=0, nullable=False, server_default="0")
     locked_until = Column(DateTime(timezone=True), nullable=True)
+    is_approved = Column(Boolean, default=True, nullable=False, server_default="true")
 
     @property
     def display_name(self) -> str:
