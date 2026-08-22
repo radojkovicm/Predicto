@@ -216,14 +216,15 @@ def _check_iron_man(db: Session, match: Match, competition_id: int) -> None:
         return
     match_ids = {m.id for m in phase_matches}
     match_count = len(match_ids)
+
+    pred_counts = dict(
+        db.query(Prediction.user_id, func.count(Prediction.id))
+        .filter(Prediction.match_id.in_(match_ids))
+        .group_by(Prediction.user_id)
+        .all()
+    )
     for user in db.query(User).all():
-        pred_count = (
-            db.query(func.count(Prediction.id))
-            .filter(Prediction.user_id == user.id,
-                    Prediction.match_id.in_(match_ids))
-            .scalar()
-        )
-        if pred_count == match_count:
+        if pred_counts.get(user.id, 0) == match_count:
             _award(db, user.id, "iron_man", competition_id)
 
 

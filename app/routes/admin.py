@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.auth.csrf import csrf_token
 from app.auth.deps import require_admin
 from app.auth.flash import flash, get_flashes
 from app.auth.password import hash_password
@@ -19,6 +20,7 @@ from app.services import badge_service, ranking_service, result_service
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 TZ_DISPLAY = pytz.timezone("Europe/Ljubljana")
 
 
@@ -267,20 +269,21 @@ async def delete_user(
     admin_user: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    """Soft delete — the account can no longer log in, but its predictions,
+    badges and log entries stay intact so leaderboards and audit trails don't
+    develop holes. See [[security-todos]] in project memory for why.
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         flash(request, "User not found.", "error")
         return RedirectResponse("/admin/users", status_code=302)
+    if user_id == admin_user.id:
+        flash(request, "You cannot delete your own account.", "error")
+        return RedirectResponse("/admin/users", status_code=302)
 
-    username = user.username
-    db.query(PredictionLog).filter(PredictionLog.user_id == user_id).delete()
-    db.query(Prediction).filter(Prediction.user_id == user_id).delete()
-    from app.models.models import UserBadge
-    db.query(UserBadge).filter(UserBadge.user_id == user_id).delete()
-    db.query(UserLeague).filter(UserLeague.user_id == user_id).delete()
-    db.delete(user)
+    user.deleted_at = datetime.now(timezone.utc)
     db.commit()
-    flash(request, f"User '{username}' deleted completely.", "success")
+    flash(request, f"User '{user.username}' deleted (predictions and history are kept).", "success")
     return RedirectResponse("/admin/users", status_code=302)
 
 

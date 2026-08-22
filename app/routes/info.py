@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.auth.csrf import csrf_token
 from app.auth.deps import require_login
 from app.auth.flash import get_flashes
 from app.db import get_db
@@ -9,6 +10,7 @@ from app.models.models import Competition, User
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 
 
 @router.get("/info")

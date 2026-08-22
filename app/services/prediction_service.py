@@ -24,8 +24,8 @@ def save_prediction(
     if lock_service.is_locked(match):
         raise ValueError("This match is locked — predictions are closed.")
 
-    if match.competition.status == "finished":
-        raise ValueError("This competition has finished — predictions are closed.")
+    if match.competition.status != "active":
+        raise ValueError("This competition isn't open for predictions right now.")
 
     existing = db.query(Prediction).filter(
         Prediction.user_id == user.id,

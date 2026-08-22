@@ -5,6 +5,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
+from app.auth.csrf import csrf_token
 from app.auth.flash import flash, get_flashes
 from app.auth.password import hash_password
 from app.db import get_db
@@ -12,6 +13,7 @@ from app.models.models import League, User, UserLeague
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 limiter = Limiter(key_func=get_remote_address)
 
 

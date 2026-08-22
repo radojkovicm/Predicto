@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from app.auth.csrf import csrf_token
 from app.auth.deps import require_login
 from app.auth.flash import get_flashes
 from app.db import get_db
@@ -13,6 +14,7 @@ from app.services.league_service import resolve_league
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 
 
 @router.get("/ranking")
