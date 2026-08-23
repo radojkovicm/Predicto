@@ -1,9 +1,10 @@
 import pytz
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
@@ -16,12 +17,13 @@ from app.db import get_db
 from app.models.models import (
     Competition, League, Match, Phase, Prediction, PredictionLog, ResultLog, User, UserBadge, UserLeague
 )
-from app.services import badge_service, ranking_service, result_service
+from app.services import badge_service, match_import_service, ranking_service, result_service
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["csrf_token"] = csrf_token
 TZ_DISPLAY = pytz.timezone("Europe/Ljubljana")
+LEAGUE_ARCHIVE_SUFFIX = " (archived)"
 
 
 def _to_local(dt: datetime) -> datetime:
@@ -43,12 +45,19 @@ def _parse_kickoff(value: str) -> datetime:
 def _resolve_competition(
     db: Session,
     requested_id: Optional[int],
+    include_finished: bool = True,
 ) -> tuple[Optional[Competition], list[Competition]]:
     """Returns (selected_competition, all_competitions).
     Priority for the default: prefer active, else most recent finished, else most recent by id.
     Mirrors league_service.resolve_league's "pick from query param, else sensible default" pattern.
+
+    include_finished=False drops finished competitions entirely — for the day-to-day
+    working views (matches, results, prediction log) where a finished competition has
+    nothing left to do; it stays fully visible in /admin/archive regardless.
     """
     competitions = db.query(Competition).order_by(Competition.id.desc()).all()
+    if not include_finished:
+        competitions = [c for c in competitions if c.status != "finished"]
     if not competitions:
         return None, []
     if requested_id:
@@ -298,13 +307,15 @@ async def matches_list(
     db: Session = Depends(get_db),
     competition_id: Optional[int] = None,
 ):
+    selected_competition, competitions = _resolve_competition(db, competition_id, include_finished=False)
     matches = (
         db.query(Match)
         .options(joinedload(Match.phase))
+        .filter(Match.competition_id == selected_competition.id)
         .order_by(Match.kickoff_utc)
         .all()
+        if selected_competition else []
     )
-    selected_competition, competitions = _resolve_competition(db, competition_id)
     phases = (
         db.query(Phase)
         .filter(Phase.competition_id == selected_competition.id)
@@ -407,6 +418,67 @@ async def create_match(
     return RedirectResponse("/admin/matches", status_code=302)
 
 
+@router.get("/matches/upload-template")
+async def matches_upload_template(
+    competition_id: int,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    competition = db.query(Competition).filter(Competition.id == competition_id).first()
+    if not competition:
+        return RedirectResponse("/admin/matches", status_code=302)
+
+    phases = (
+        db.query(Phase)
+        .filter(Phase.competition_id == competition_id)
+        .order_by(Phase.order_index)
+        .all()
+    )
+    wb = match_import_service.build_template_workbook(phases)
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"{competition.name.replace(' ', '_')}_matches_template.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.post("/matches/upload")
+async def matches_upload(
+    request: Request,
+    competition_id: int = Form(...),
+    file: UploadFile = File(...),
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    competition = db.query(Competition).filter(Competition.id == competition_id).first()
+    if not competition:
+        flash(request, "Competition not found.", "error")
+        return RedirectResponse("/admin/matches", status_code=302)
+    if competition.status == "finished":
+        flash(request, "This competition is finished — see it in the archive instead.", "error")
+        return RedirectResponse("/admin/matches", status_code=302)
+
+    try:
+        file_bytes = await file.read()
+        added, messages = match_import_service.parse_upload(db, file_bytes, competition_id)
+    except Exception as e:
+        flash(request, f"Couldn't read that file: {e}", "error")
+        return RedirectResponse(f"/admin/matches?competition_id={competition_id}", status_code=302)
+
+    if added:
+        flash(request, f"Added {added} match(es) to '{competition.name}'.", "success")
+    if messages:
+        flash(request, f"{len(messages)} row(s) skipped: " + " | ".join(messages), "warning")
+    if not added and not messages:
+        flash(request, "No rows found in that file.", "warning")
+    return RedirectResponse(f"/admin/matches?competition_id={competition_id}", status_code=302)
+
+
 @router.get("/matches/{match_id}/edit")
 async def edit_match_form(
     match_id: int,
@@ -499,7 +571,8 @@ async def result_form(
     db: Session = Depends(get_db),
 ):
     match = db.query(Match).options(joinedload(Match.phase)).filter(Match.id == match_id).first()
-    if not match:
+    if not match or match.competition.status == "finished":
+        flash(request, "This competition is finished — see it in the archive instead.", "error")
         return RedirectResponse("/admin/matches", status_code=302)
     return templates.TemplateResponse(
         "admin/result.html",
@@ -543,9 +616,17 @@ async def result_log(
     admin_user: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    # Same reasoning as /prediction-log: a finished competition has nothing
+    # left to audit day-to-day; its logs stay intact, just hidden from here.
+    not_finished_match_ids = (
+        db.query(Match.id)
+        .join(Competition, Match.competition_id == Competition.id)
+        .filter(Competition.status != "finished")
+    )
     logs = (
         db.query(ResultLog)
         .options(joinedload(ResultLog.match), joinedload(ResultLog.changed_by_user))
+        .filter(ResultLog.match_id.in_(not_finished_match_ids))
         .order_by(ResultLog.changed_at.desc())
         .limit(500)
         .all()
@@ -574,6 +655,14 @@ async def prediction_log(
     user_id: int = None,
     match_id: int = None,
 ):
+    # Finished competitions have nothing left to audit here day-to-day —
+    # their logs stay fully intact in the DB, just not shown in this working view.
+    not_finished_match_ids = (
+        db.query(Match.id)
+        .join(Competition, Match.competition_id == Competition.id)
+        .filter(Competition.status != "finished")
+    )
+
     query = (
         db.query(PredictionLog)
         .options(
@@ -581,6 +670,7 @@ async def prediction_log(
             joinedload(PredictionLog.match).joinedload(Match.phase),
             joinedload(PredictionLog.changed_by_user),
         )
+        .filter(PredictionLog.match_id.in_(not_finished_match_ids))
         .order_by(PredictionLog.changed_at.desc())
     )
     if user_id:
@@ -590,7 +680,14 @@ async def prediction_log(
 
     logs = query.limit(1000).all()
     users = db.query(User).order_by(User.username).all()
-    matches = db.query(Match).options(joinedload(Match.phase)).order_by(Match.kickoff_utc).all()
+    matches = (
+        db.query(Match)
+        .options(joinedload(Match.phase))
+        .join(Competition, Match.competition_id == Competition.id)
+        .filter(Competition.status != "finished")
+        .order_by(Match.kickoff_utc)
+        .all()
+    )
 
     return templates.TemplateResponse(
         "admin/prediction_log.html",
@@ -761,10 +858,14 @@ async def league_archive(
 ):
     """Retire one league early — its members stop seeing it in ranking/profile
     even though its competition (and any other leagues in it) stay active.
+    The name gets an " (archived)" suffix so it can't be confused with a live
+    league later, and so the original name is free if reused for a new season.
     """
     league = db.query(League).filter(League.id == league_id).first()
     if league:
         league.archived_at = datetime.now(timezone.utc)
+        if not league.name.endswith(LEAGUE_ARCHIVE_SUFFIX):
+            league.name = f"{league.name}{LEAGUE_ARCHIVE_SUFFIX}"
         db.commit()
         flash(request, f"'{league.name}' archived — hidden from members, still readable here.", "success")
     return RedirectResponse("/admin/leagues", status_code=302)
@@ -780,6 +881,8 @@ async def league_unarchive(
     league = db.query(League).filter(League.id == league_id).first()
     if league:
         league.archived_at = None
+        if league.name.endswith(LEAGUE_ARCHIVE_SUFFIX):
+            league.name = league.name[: -len(LEAGUE_ARCHIVE_SUFFIX)]
         db.commit()
         flash(request, f"'{league.name}' unarchived — visible to members again.", "success")
     return RedirectResponse("/admin/leagues", status_code=302)

@@ -46,10 +46,31 @@
             {% endfor %}
           </select>
         </div>
+        {% if selected_competition %}
+          <div class="form-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <div style="display:flex;gap:.5rem">
+              <a href="/admin/matches/upload-template?competition_id={{ selected_competition.id }}"
+                 class="btn btn-sm btn-secondary">⬇️ Excel template</a>
+              <button type="button" class="btn btn-sm btn-secondary"
+                      onclick="document.getElementById('excel-upload-form').classList.toggle('hidden')">⬆️ Upload Excel</button>
+            </div>
+          </div>
+        {% endif %}
       </div>
     </form>
+
+    {% if selected_competition %}
+      <form id="excel-upload-form" method="post" action="/admin/matches/upload"
+            enctype="multipart/form-data" class="inline-form hidden" style="margin-top:.75rem">
+        <input type="hidden" name="competition_id" value="{{ selected_competition.id }}">
+        <input type="file" name="file" accept=".xlsx" required>
+        <button type="submit" class="btn btn-sm btn-primary">Import fixtures</button>
+        <small style="color:var(--text-muted)">Only adds new matches — never touches existing ones or results.</small>
+      </form>
+    {% endif %}
   {% else %}
-    <p class="empty-state">No competitions yet. <a href="/admin/competitions/new">Create one first</a>.</p>
+    <p class="empty-state">No active competition right now. <a href="/admin/competitions/new">Create one</a>, or check the <a href="/admin/archive">Archive</a> for finished ones.</p>
   {% endif %}
 </section>
 
@@ -99,7 +120,7 @@
 
 <!-- Match list -->
 <section class="card">
-  <h3>All Matches ({{ matches | length }})</h3>
+  <h3>{{ selected_competition.name if selected_competition else 'Matches' }} ({{ matches | length }})</h3>
   <div class="table-wrap">
     <table class="admin-table">
       <thead>

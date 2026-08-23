@@ -27,24 +27,21 @@
 </section>
 
 <!-- League list -->
-{% if leagues %}
-  {% for league in leagues %}
+{% set live_leagues = leagues | rejectattr('archived_at') | list %}
+{% set archived_leagues = leagues | selectattr('archived_at') | list %}
+
+{% if live_leagues %}
+  {% for league in live_leagues %}
     <section class="card">
       <div class="league-card-header">
         <div>
-          <h3>🏆 {{ league.name }} {% if league.archived_at %}<small class="admin-tag">📦 archived</small>{% endif %}</h3>
+          <h3>🏆 {{ league.name }}</h3>
           <small class="text-muted">{{ member_map[league.id] | length }} member(s) · {{ league.competition.name }}</small>
         </div>
         <div style="display:flex;gap:.5rem">
           <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
-          {% if league.archived_at %}
-            <form method="post" action="/admin/leagues/{{ league.id }}/unarchive" style="display:inline">
-              <button type="submit" class="btn btn-sm btn-success">Unarchive</button>
-            </form>
-          {% else %}
-            <button type="button" class="btn btn-sm btn-danger-outline"
-                    onclick="confirmDelete('Archive {{ league.name }}? Members will stop seeing it in ranking/profile, even though {{ league.competition.name }} stays active. You can unarchive it anytime.', '/admin/leagues/{{ league.id }}/archive')">Archive</button>
-          {% endif %}
+          <button type="button" class="btn btn-sm btn-danger-outline"
+                  onclick="confirmDelete('Archive {{ league.name }}? Members will stop seeing it in ranking/profile, even though {{ league.competition.name }} stays active. You can unarchive it anytime.', '/admin/leagues/{{ league.id }}/archive')">Archive</button>
         </div>
       </div>
 
@@ -100,9 +97,41 @@
       {% endif %}
     </section>
   {% endfor %}
-{% else %}
+{% elif not archived_leagues %}
   <div class="card">
     <p class="empty-state">No leagues created yet.</p>
   </div>
+{% endif %}
+
+{% if archived_leagues %}
+  <section class="card">
+    <h3>📦 Archived Leagues ({{ archived_leagues | length }})</h3>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Competition</th>
+            <th>Members</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for league in archived_leagues %}
+            <tr>
+              <td>{{ league.name }}</td>
+              <td>{{ league.competition.name }}</td>
+              <td>{{ member_map[league.id] | length }}</td>
+              <td class="action-cell">
+                <form method="post" action="/admin/leagues/{{ league.id }}/unarchive" style="display:inline">
+                  <button type="submit" class="btn btn-sm btn-success">Unarchive</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 {% endif %}
 {% endblock %}
