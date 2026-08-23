@@ -752,6 +752,39 @@ async def league_revoke_invite(
     return RedirectResponse("/admin/leagues", status_code=302)
 
 
+@router.post("/leagues/{league_id}/archive")
+async def league_archive(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Retire one league early — its members stop seeing it in ranking/profile
+    even though its competition (and any other leagues in it) stay active.
+    """
+    league = db.query(League).filter(League.id == league_id).first()
+    if league:
+        league.archived_at = datetime.now(timezone.utc)
+        db.commit()
+        flash(request, f"'{league.name}' archived — hidden from members, still readable here.", "success")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
+@router.post("/leagues/{league_id}/unarchive")
+async def league_unarchive(
+    league_id: int,
+    request: Request,
+    admin_user: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    league = db.query(League).filter(League.id == league_id).first()
+    if league:
+        league.archived_at = None
+        db.commit()
+        flash(request, f"'{league.name}' unarchived — visible to members again.", "success")
+    return RedirectResponse("/admin/leagues", status_code=302)
+
+
 @router.get("/leagues/{league_id}/edit")
 async def league_edit_form(
     league_id: int,

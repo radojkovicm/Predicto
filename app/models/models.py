@@ -40,6 +40,7 @@ class League(Base):
     join_code = Column(String(20), unique=True, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     competition_id = Column(Integer, ForeignKey("competitions.id"), nullable=False)
+    archived_at = Column(DateTime(timezone=True), nullable=True)
 
     members = relationship("User", secondary="user_leagues", back_populates="leagues")
     competition = relationship("Competition", back_populates="leagues")

@@ -32,10 +32,20 @@
     <section class="card">
       <div class="league-card-header">
         <div>
-          <h3>🏆 {{ league.name }}</h3>
+          <h3>🏆 {{ league.name }} {% if league.archived_at %}<small class="admin-tag">📦 archived</small>{% endif %}</h3>
           <small class="text-muted">{{ member_map[league.id] | length }} member(s) · {{ league.competition.name }}</small>
         </div>
-        <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+        <div style="display:flex;gap:.5rem">
+          <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+          {% if league.archived_at %}
+            <form method="post" action="/admin/leagues/{{ league.id }}/unarchive" style="display:inline">
+              <button type="submit" class="btn btn-sm btn-success">Unarchive</button>
+            </form>
+          {% else %}
+            <button type="button" class="btn btn-sm btn-danger-outline"
+                    onclick="confirmDelete('Archive {{ league.name }}? Members will stop seeing it in ranking/profile, even though {{ league.competition.name }} stays active. You can unarchive it anytime.', '/admin/leagues/{{ league.id }}/archive')">Archive</button>
+          {% endif %}
+        </div>
       </div>
 
       <!-- Invite link -->

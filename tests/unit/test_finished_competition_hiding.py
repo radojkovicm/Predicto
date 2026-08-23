@@ -70,6 +70,30 @@ def test_get_user_leagues_excludes_finished_competition(db_session):
     assert [l.id for l in leagues] == [new_league.id]
 
 
+def test_get_user_leagues_excludes_archived_league_even_if_competition_active(db_session):
+    """A single league can retire early without the whole competition (or its
+    other leagues) being touched — that's the point of archived_at vs. the
+    competition-level finished status above.
+    """
+    from datetime import datetime, timezone as tz
+
+    active = _make_competition(db_session, "Champions League", "active")
+    user = _make_user(db_session, "player")
+
+    archived_league = _make_league(db_session, "Retired Group", active.id)
+    archived_league.archived_at = datetime.now(tz.utc)
+    live_league = _make_league(db_session, "Still Playing", active.id)
+    db_session.add_all([
+        UserLeague(user_id=user.id, league_id=archived_league.id),
+        UserLeague(user_id=user.id, league_id=live_league.id),
+    ])
+    db_session.commit()
+
+    leagues = league_service.get_user_leagues(db_session, user.id)
+
+    assert [l.id for l in leagues] == [live_league.id]
+
+
 def test_get_user_leagues_empty_when_only_league_is_finished(db_session):
     finished = _make_competition(db_session, "WC2026", "finished")
     user = _make_user(db_session, "player")
