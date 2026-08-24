@@ -83,6 +83,7 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
         .filter(
             UserBadge.user_id.in_(member_ids),
             UserBadge.is_active == True,
+            UserBadge.competition_id == league.competition_id,
             or_(UserBadge.league_id == league_id, UserBadge.league_id == None),
         )
         .all()

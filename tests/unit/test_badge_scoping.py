@@ -12,7 +12,7 @@ tests/integration/test_wc2026_migration_parity.py for that).
 from datetime import datetime, timedelta
 
 from app.models.models import Competition, League, Match, Phase, Prediction, User, UserBadge, UserLeague
-from app.services import badge_service
+from app.services import badge_service, ranking_service
 
 
 def _make_competition(db, name):
@@ -215,3 +215,33 @@ def test_league_badges_scoped_to_matchs_competition_only(db_session):
     assert all(b.league_id == league_x.id for b in league_scoped_badges)
     assert all(b.competition_id == comp_a.id for b in league_scoped_badges)
     assert not any(b.league_id == league_y.id for b in league_scoped_badges)
+
+
+# ---------------------------------------------------------------------------
+# Personal (league_id IS NULL) badges from a finished/other competition must
+# not leak into a live leaderboard just because they're still is_active and
+# league_id IS NULL matches the "personal badge" branch of the OR filter.
+# ---------------------------------------------------------------------------
+
+def test_leaderboard_does_not_leak_personal_badge_from_other_competition(db_session):
+    old_comp = _make_competition(db_session, "WC2026")
+    new_comp = _make_competition(db_session, "Champions League")
+    user = _make_user(db_session, "player")
+
+    new_league = League(name="CL League", competition_id=new_comp.id)
+    db_session.add(new_league)
+    db_session.flush()
+    db_session.add(UserLeague(user_id=user.id, league_id=new_league.id))
+
+    # A personal badge (league_id NULL) awarded back in the OLD competition —
+    # still is_active because nothing ever swept it after the tournament ended.
+    db_session.add(UserBadge(
+        user_id=user.id, badge_code="joker_master",
+        league_id=None, competition_id=old_comp.id, is_active=True,
+    ))
+    db_session.commit()
+
+    leaderboard = ranking_service.get_leaderboard(db_session, new_league.id)
+
+    entry = next(e for e in leaderboard if e["user_id"] == user.id)
+    assert entry["badges"] == []

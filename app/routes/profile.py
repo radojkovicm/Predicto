@@ -72,6 +72,7 @@ async def user_profile(
             .filter(
                 UserBadge.user_id == user_id,
                 UserBadge.is_active == True,
+                UserBadge.competition_id == active_league.competition_id,
                 or_(UserBadge.league_id == active_league.id, UserBadge.league_id == None),
             )
             .order_by(UserBadge.awarded_at.desc())
