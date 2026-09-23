@@ -20,5 +20,13 @@ class Settings(BaseSettings):
             v = "postgresql://" + v[len("postgres://"):]
         return v
 
+    @property
+    def IS_DEMO_MODE(self) -> bool:
+        # Matches the ephemeral-/tmp sqlite path app/db.py seeds on cold
+        # start — true only for the throwaway Vercel demo, never for a real
+        # self-hosted install, so the login page can safely surface the
+        # sample credentials only there.
+        return self.DATABASE_URL.startswith("sqlite:////tmp/")
+
 
 settings = Settings()

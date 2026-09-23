@@ -16,6 +16,15 @@
       <p>Developed by Miloš</p>
     </div>
 
+    {% if demo_mode %}
+      <div class="flash flash-info">
+        <strong>Demo mode</strong> — try it out with:<br>
+        Admin: <code>admin</code> / <code>demo1234</code><br>
+        Player: <code>marko</code> / <code>demo1234</code><br>
+        Data resets whenever this deployment cold-starts.
+      </div>
+    {% endif %}
+
     {% for f in flashes %}
       <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
     {% endfor %}

@@ -12,6 +12,7 @@ from app.auth.flash import flash, get_flashes
 from app.auth.password import verify_password
 from app.db import get_db
 from app.models.models import User
+from config.config import settings
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -25,7 +26,10 @@ LOCKOUT_MINUTES = 30
 @router.get("/login")
 async def login_get(request: Request):
     flashes = get_flashes(request)
-    return templates.TemplateResponse("login.html", {"request": request, "flashes": flashes})
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "flashes": flashes, "demo_mode": settings.IS_DEMO_MODE},
+    )
 
 
 @router.post("/login")
