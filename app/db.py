@@ -1,8 +1,22 @@
+import os
+import shutil
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 from config.config import settings
+
+# Vercel demo mode: sqlite:////tmp/<name>.db points at the function's
+# writable /tmp, which starts empty on every cold start. Seed it from the
+# read-only bundled demo_seed.db so the live demo always has something to
+# show, without needing a real Postgres database.
+if settings.DATABASE_URL.startswith("sqlite:////tmp/"):
+    _tmp_path = settings.DATABASE_URL.removeprefix("sqlite:///")
+    if not os.path.exists(_tmp_path):
+        _seed_path = os.path.join(os.path.dirname(__file__), "demo_seed.db")
+        if os.path.exists(_seed_path):
+            shutil.copyfile(_seed_path, _tmp_path)
 
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 _connect_args = {"check_same_thread": False} if _is_sqlite else {}

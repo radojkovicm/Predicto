@@ -10,6 +10,9 @@
 *.sql
 /db_dump/*
 !/db_dump/.gitkeep
+# ...except the intentionally-committed, sample-data-only seed for the
+# Vercel demo (no real users/predictions — see app/db.py).
+!/app/demo_seed.db
 
 # Internal notes with infra details (VPS IP, SSH user, private domain)
 setup_deployment.md

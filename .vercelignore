@@ -4,6 +4,7 @@ env
 tests
 .pytest_cache
 *.db
+!/app/demo_seed.db
 *.sqlite
 *.sqlite3
 *.dump
