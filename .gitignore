@@ -2,10 +2,15 @@
 .env
 *.env
 
-# Database files
+# Database files and dumps (may contain real user data — never commit)
 *.db
 *.sqlite
 *.sqlite3
+*.dump
+*.sql
+
+# Internal notes with infra details (VPS IP, SSH user, private domain)
+setup_deployment.md
 
 # Python
 __pycache__/
@@ -32,3 +37,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Vercel
+.vercel
