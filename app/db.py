@@ -9,22 +9,23 @@ from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
 from config.config import settings
 
-# app/demo_seed.db ships a small, all-finished Group Stage — its kickoff
-# times get re-anchored to real "now" every cold start (see below) so the
-# live Vercel demo always looks like a recently-played group stage instead
-# of the fixed dates baked in when the seed was generated slowly drifting
-# into the past. Spread `per_day` matches per day, most recent finishing
-# ~1 day ago.
+# app/demo_seed.db ships a small Group Stage — mostly finished (recently
+# played), plus a few still open — and its kickoff times get re-anchored to
+# real "now" every cold start (see below) so the live Vercel demo always
+# looks current instead of the fixed dates baked in when the seed was
+# generated slowly drifting away. Finished matches are spread `per_day`
+# per day, ending TODAY for the most recent one; open matches start a
+# couple of days out, so there's always something to actually predict.
 def _reanchor_demo_dates(db_path: str, per_day: int = 4) -> None:
     now = datetime.now(timezone.utc)
     conn = sqlite3.connect(db_path)
     try:
-        rows = conn.execute(
+        finished = conn.execute(
             "SELECT id FROM matches WHERE is_finished = 1 ORDER BY id"
         ).fetchall()
-        n = len(rows)
-        for idx, (match_id,) in enumerate(rows):
-            days_ago = max(1, -(-(n - idx) // per_day))  # ceil division, oldest first
+        n = len(finished)
+        for idx, (match_id,) in enumerate(finished):
+            days_ago = (n - 1 - idx) // per_day  # most recent (last idx) -> 0 = today
             hour = 14 + (idx % per_day) * 3
             kickoff = (now - timedelta(days=days_ago)).replace(
                 hour=hour % 24, minute=0, second=0, microsecond=0
@@ -33,6 +34,20 @@ def _reanchor_demo_dates(db_path: str, per_day: int = 4) -> None:
             conn.execute(
                 "UPDATE matches SET kickoff_utc = ?, finished_at = ? WHERE id = ?",
                 (kickoff.isoformat(), finished_at.isoformat(), match_id),
+            )
+
+        open_matches = conn.execute(
+            "SELECT id FROM matches WHERE is_finished = 0 ORDER BY id"
+        ).fetchall()
+        for idx, (match_id,) in enumerate(open_matches):
+            days_ahead = idx + 2  # first open match is always ~2 days out
+            hour = 12 + (idx % 4) * 3
+            kickoff = (now + timedelta(days=days_ahead)).replace(
+                hour=hour % 24, minute=0, second=0, microsecond=0
+            )
+            conn.execute(
+                "UPDATE matches SET kickoff_utc = ? WHERE id = ?",
+                (kickoff.isoformat(), match_id),
             )
         conn.commit()
     finally:
