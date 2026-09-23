@@ -15,7 +15,7 @@ from app.routes import settings as settings_routes
 from app.routes import admin as admin_routes
 
 app = FastAPI(
-    title="WC 2026 Predicto",
+    title="Predicto",
     # Hide API docs in production
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url=None,

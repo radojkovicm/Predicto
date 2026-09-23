@@ -38,15 +38,17 @@ def upgrade() -> None:
         if_not_exists=True,
     )
 
-    # WC2026 is factually finished (season report already produced) — every
-    # existing row gets attributed to this single competition below.
+    # Pre-existing (single-competition) installs get their historical data
+    # attributed to a "World Cup 2026" competition below. A fresh install has
+    # no phases yet at this point in the migration chain, so it skips this
+    # and starts with zero competitions — nothing to backfill.
     op.execute("""
         INSERT INTO competitions (name, status, finished_at)
-        VALUES (
+        SELECT
             'World Cup 2026',
             'finished',
             (SELECT MAX(finished_at) FROM matches)
-        )
+        WHERE EXISTS (SELECT 1 FROM phases)
     """)
 
     # ── phases ───────────────────────────────────────────────────────────────

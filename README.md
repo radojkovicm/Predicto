@@ -1,6 +1,6 @@
-# ⚽ Predicto — WC 2026 Score Prediction Game
+# ⚽ Predicto — Score Prediction Game
 
-A self-hosted web app for an office World Cup 2026 score-prediction pool. Users predict exact match scores, points are awarded by a fixed scoring formula, and a leaderboard tracks the league. **No money involved — for fun only.**
+A self-hosted score-prediction pool for **any football competition** — a World Cup, a Champions League season, your office's Sunday league, whatever. Admins spin up a competition with its own scoring rules and phases, users predict exact match scores, and a leaderboard tracks the standings per league. **No money involved — for fun only.**
 
 Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framework, dark mode by default.
 
@@ -22,13 +22,16 @@ Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framewo
 
 ## Features
 
-- **Exact-score predictions** with a fixed scoring formula (correct tip, goal difference, exact goals)
+- **Multi-competition** — run any number of competitions (past, active, or archived), each with its own name, phases, and scoring configuration
+- **Configurable scoring per competition** — points for correct tip / goal difference / exact score, joker bonus/penalty, and a per-phase point multiplier are all admin-editable, not hardcoded
+- **Exact-score predictions** — points awarded for correct tip (1X2), correct goal difference, and exact goals per team
 - **Joker** — one per phase, doubles down on a prediction for bonus points or a penalty
-- **Leagues** — group players into separate leaderboards (e.g. per office/team)
-- **Prediction lock** — 15 minutes before kickoff, then predictions are frozen
+- **Leagues** — group players into separate leaderboards (e.g. per office/team/friend group), with invite links and archiving once a competition ends
+- **Prediction lock** — configurable minutes-before-kickoff cutoff, then predictions are frozen
 - **Post-lock stats** — see the outcome distribution and everyone's predictions once a match locks
 - **Achievement badges**, personal stats, and per-match prediction history
-- **Admin panel** — create/edit matches, enter results, manage users and leagues, audit logs
+- **Admin panel** — create/edit competitions, phases and matches, enter results, manage users and leagues, audit logs, soft-delete users while preserving history
+- **Excel import** for bulk-loading a competition's fixture list
 - **Dark mode** by default, mobile-friendly
 - **n8n-friendly reminder API** for nudging users who haven't predicted yet
 
@@ -39,7 +42,7 @@ Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framewo
 - **Backend:** Python 3.11+, FastAPI
 - **DB:** PostgreSQL in production (SQLite for local dev), SQLAlchemy 2.x ORM + Alembic migrations
 - **Templating:** Jinja2, server-rendered — vanilla JS + plain CSS on top
-- **Auth:** session cookies (HttpOnly, Secure, SameSite=Lax) + bcrypt password hashing
+- **Auth:** session cookies (HttpOnly, Secure, SameSite=Lax) + bcrypt password hashing, CSRF-protected forms
 - **Validation:** Pydantic v2
 
 ---
@@ -70,11 +73,10 @@ cp .env.example .env
 | `REMINDER_API_TOKEN` | Static token for the n8n reminder endpoint |
 | `DEBUG` | `true` for local dev (disables HTTPS-only cookies) |
 
-### 4. Run migrations, seed data, create an admin
+### 4. Run migrations and create an admin
 
 ```bash
 alembic upgrade head
-python scripts/seed_phases.py
 python scripts/create_admin.py
 ```
 
@@ -84,7 +86,9 @@ python scripts/create_admin.py
 uvicorn app.main:app --reload
 ```
 
-Open http://localhost:8000
+Open http://localhost:8000, log in as the admin, and create your first competition at `/admin/competitions` — add phases, then matches (one by one or via the Excel importer), and you're running.
+
+`scripts/seed_phases.py` and `scripts/import_group_stage.py` are optional convenience scripts that preload a sample World Cup 2026-style fixture list, useful for trying the app out — they're not required for a real competition, everything they do can also be done from the admin panel.
 
 ---
 
@@ -127,9 +131,9 @@ In the Vercel project settings → Environment Variables:
 ```bash
 export DATABASE_URL="postgresql://...your-neon-url..."
 alembic upgrade head
-python scripts/seed_phases.py
-python scripts/import_group_stage.py   # optional: preloads the real WC 2026 fixture list
 python scripts/create_admin.py
+python scripts/seed_phases.py         # optional: sample phases to try the app with
+python scripts/import_group_stage.py  # optional: preloads a sample fixture list
 ```
 
 ### 5. Deploy
@@ -138,7 +142,7 @@ python scripts/create_admin.py
 vercel --prod
 ```
 
-**Note:** Vercel's serverless functions are stateless and spin up cold per request, so the in-memory login rate limiter (`slowapi`) resets between invocations — fine for a demo, not a substitute for the VPS/Docker deployment below in a real, higher-traffic office pool.
+**Note:** Vercel's serverless functions are stateless and spin up cold per request, so the in-memory login rate limiter (`slowapi`) resets between invocations — fine for a demo, not a substitute for the VPS/Docker deployment below for a real, higher-traffic pool.
 
 ---
 
@@ -165,7 +169,6 @@ docker compose up -d --build
 
 ```bash
 docker compose exec app alembic upgrade head
-docker compose exec app python scripts/seed_phases.py
 docker compose exec app python scripts/create_admin.py
 ```
 
@@ -222,6 +225,8 @@ Wire this into an n8n workflow to send Slack/email/SMS reminders.
 
 ## Scoring Rules
 
+Every competition has its own scoring configuration (editable in the admin panel); the defaults are:
+
 For each match, points are summed (max 25 from base):
 
 ```
@@ -234,24 +239,26 @@ if pred1 == res1:                                 points += 4    # correct goals
 if pred2 == res2:                                 points += 4    # correct goals team 2
 ```
 
-**Joker** (applied on top of base points for that match, one per phase, 8 phases total):
+**Joker** (applied on top of base points for that match, one per phase by default):
 ```
 if prediction.is_joker:
     if outcome(pred) == outcome(res):  points += 8    # joker hit
     else:                              points -= 5    # joker miss
 ```
 
-Result used = score at end of extra time (penalties are not counted). A prediction can be created/edited only while `now_utc < match.kickoff_utc - 15 minutes`.
+Each phase can also carry a **point multiplier** (e.g. weight knockout rounds higher than the group stage). Result used = score at end of extra time (penalties are not counted). A prediction can be created/edited only until the configured lock cutoff before kickoff.
 
 ---
 
 ## Security Notes
 
 - Passwords hashed with bcrypt
+- CSRF tokens on all session-authenticated forms
 - Session cookies: HttpOnly + SameSite=Lax + Secure (in production)
 - IP rate limiting on login: 10 requests/minute per IP (slowapi)
 - Account lockout: 30 minutes after 10 failed login attempts
 - Admin can unlock accounts manually at `/admin/users`
+- Users are soft-deleted (history preserved), never hard-deleted
 - Prediction audit log at `/admin/prediction-log` — every prediction change is recorded
 - Result audit log at `/admin/log`
 - All DB queries via ORM (no string-built SQL)
@@ -264,20 +271,20 @@ Result used = score at end of extra time (penalties are not counted). A predicti
 app/
   main.py          FastAPI app + middleware
   db.py            SQLAlchemy engine + session
-  models/          SQLAlchemy models
+  models/          SQLAlchemy models (competitions, phases, matches, leagues, users, ...)
   schemas/         Pydantic v2 schemas
-  auth/            Password hashing, session helpers, deps
-  services/        Business logic (scoring, predictions, ranking, badges, stats, results)
+  auth/            Password hashing, session/CSRF helpers, deps
+  services/        Business logic (scoring, predictions, ranking, badges, stats, results, import)
   routes/          Route handlers
   templates/       Jinja2 templates
   static/          CSS + JS
 api/               Vercel serverless entry point
 alembic/           Migrations
 config/            Settings via pydantic-settings
-scripts/           seed_phases, create_admin, backup
-tests/unit/        Scoring, lock, ranking, badge unit tests
+scripts/           create_admin, backup, optional sample-data seeders
+tests/             Unit + integration tests
 ```
 
 ## License
 
-For personal / office use. No warranty — this is a for-fun project, not a commercial product.
+For personal / community use. No warranty — this is a for-fun project, not a commercial product.
