@@ -4,7 +4,7 @@ A self-hosted score-prediction pool for **any football competition** — a World
 
 Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framework, dark mode by default.
 
-[**Live demo →**](https://predicto-demo.vercel.app) — log in as `admin` / `demo1234` (or `marko` / `demo1234` for a non-admin view). Runs on an ephemeral SQLite seed (see [Deploy to Vercel](#deploy-to-vercel)), so data resets on cold start — it's for a click-through, not for keeping real data.
+[**Live demo →**](https://predicto-demo.vercel.app) — credentials are shown right on the login page (`admin` / `demo1234`, or `marko` / `demo1234` for a non-admin view). Runs on an ephemeral SQLite seed (see [Deploy to Vercel](#deploy-to-vercel)), so data resets on cold start — it's for a click-through, not for keeping real data.
 
 ---
 
