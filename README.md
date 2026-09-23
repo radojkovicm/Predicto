@@ -4,7 +4,7 @@ A self-hosted score-prediction pool for **any football competition** — a World
 
 Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framework, dark mode by default.
 
-[**Live demo →**](#) *(add your deployed URL here once you deploy — see [Deploy to Vercel](#deploy-to-vercel) below)*
+[**Live demo →**](https://predicto-demo.vercel.app) — log in as `admin` / `demo1234` (or `marko` / `demo1234` for a non-admin view). Runs on an ephemeral SQLite seed (see [Deploy to Vercel](#deploy-to-vercel)), so data resets on cold start — it's for a click-through, not for keeping real data.
 
 ---
 
@@ -104,7 +104,11 @@ The scoring tests are the most critical — they must pass before deploying.
 
 ## Deploy to Vercel
 
-The repo ships with a `vercel.json` + `api/index.py` entry point, so it deploys as a serverless FastAPI app. Vercel functions have no persistent filesystem, so you need an **external PostgreSQL** database (e.g. [Neon](https://neon.tech) or [Supabase](https://supabase.com) both have a free tier).
+The repo ships with a `vercel.json` + `api/index.py` entry point, so it deploys as a serverless FastAPI app.
+
+**Want a throwaway demo with zero setup?** Set `DATABASE_URL=sqlite:////tmp/predicto_demo.db` (plus a `SECRET_KEY` and `REMINDER_API_TOKEN`, see step 3) and skip straight to step 5 — `app/db.py` seeds Vercel's writable `/tmp` from the bundled `app/demo_seed.db` on cold start automatically. Data resets whenever the function cold-starts, so it's only for letting people click around, never for a real competition.
+
+For a real deployment, use an **external PostgreSQL** database instead (e.g. [Neon](https://neon.tech) or [Supabase](https://supabase.com), both have a free tier):
 
 ### 1. Create a free Postgres database
 
