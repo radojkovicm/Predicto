@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
+from app.auth.csrf import csrf_token
 from app.auth.flash import flash, get_flashes
 from app.auth.password import verify_password
 from app.db import get_db
@@ -14,6 +15,7 @@ from app.models.models import User
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 limiter = Limiter(key_func=get_remote_address)
 
 LOCKOUT_ATTEMPTS = 10
@@ -68,6 +70,14 @@ async def login_post(request: Request, db: Session = Depends(get_db)):
                 return RedirectResponse("/login", status_code=302)
             db.commit()
         flash(request, "Invalid username or password.", "error")
+        return RedirectResponse("/login", status_code=302)
+
+    if user.deleted_at:
+        flash(request, "This account has been deactivated.", "error")
+        return RedirectResponse("/login", status_code=302)
+
+    if not user.is_approved:
+        flash(request, "Your account is still waiting for admin approval.", "error")
         return RedirectResponse("/login", status_code=302)
 
     # Successful login

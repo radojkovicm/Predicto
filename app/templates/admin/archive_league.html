@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ league.name }} — {{ competition.name }} Archive{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/archive/{{ competition.id }}" class="back-link">← {{ competition.name }}</a>
+  <h2>{{ league.name }} — Final Leaderboard</h2>
+</div>
+
+{% if leaderboard %}
+  <div class="table-wrap">
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th title="Total points">Pts</th>
+          <th title="Correct tips" class="hide-sm">Tips</th>
+          <th title="Exact scores" class="hide-sm">Exact</th>
+          <th title="Joker Master / Joker Victim">Jokers</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in leaderboard %}
+          <tr>
+            <td class="rank-cell">
+              {% if entry.rank == 1 %}🥇
+              {% elif entry.rank == 2 %}🥈
+              {% elif entry.rank == 3 %}🥉
+              {% else %}{{ entry.rank }}
+              {% endif %}
+            </td>
+            <td>{{ entry.display_name }}</td>
+            <td class="points-cell"><strong>{{ entry.total_points }}</strong></td>
+            <td class="hide-sm">{{ entry.correct_tips }}</td>
+            <td class="hide-sm">{{ entry.exact_scores }}</td>
+            <td>
+              <small>🃏 {{ joker_stats[entry.user_id].joker_master }} · 💀 {{ joker_stats[entry.user_id].joker_victim }}</small>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="empty-state">No predictions were made in this league.</p>
+{% endif %}
+{% endblock %}

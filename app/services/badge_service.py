@@ -21,7 +21,9 @@ from app.services.scoring_service import get_outcome, Outcome
 # (3 days = ~10 matches cycle)
 BADGE_LIFETIME_DAYS = 3
 
-GROUP_PHASE_ORDER_INDICES = {1, 2, 3}
+# Hot Streak: this many consecutive matches, each worth at least this many points
+HOT_STREAK_MIN_POINTS = 17
+HOT_STREAK_LENGTH = 4
 
 BADGE_META = {
     "prophet":          ("Prophet",          "🔮"),
@@ -44,6 +46,7 @@ def _award(
     db: Session,
     user_id: int,
     badge_code: str,
+    competition_id: int,
     match_id: Optional[int] = None,
     league_id: Optional[int] = None,
 ) -> bool:
@@ -55,13 +58,15 @@ def _award(
             UserBadge.badge_code == badge_code,
             UserBadge.match_id == match_id,
             UserBadge.league_id == league_id,
+            UserBadge.competition_id == competition_id,
         )
         .first()
     )
     if existing:
         return False
     db.add(UserBadge(user_id=user_id, badge_code=badge_code,
-                     match_id=match_id, league_id=league_id))
+                     match_id=match_id, league_id=league_id,
+                     competition_id=competition_id))
     db.flush()
     return True
 
@@ -105,26 +110,27 @@ def evaluate_badges_after_result(
         return
 
     res_outcome = get_outcome(res1, res2)
+    competition_id = match.competition_id
 
     # ── 1. Personal badges (no league context) ──────────────────────────────
     for pred in predictions:
         pred_outcome = get_outcome(pred.pred_goals1, pred.pred_goals2)
         if pred.pred_goals1 == res1 and pred.pred_goals2 == res2:
-            _award(db, pred.user_id, "prophet", match.id)
+            _award(db, pred.user_id, "prophet", competition_id, match.id)
         if pred.is_joker:
             if pred_outcome == res_outcome:
-                _award(db, pred.user_id, "joker_master", match.id)
+                _award(db, pred.user_id, "joker_master", competition_id, match.id)
             else:
-                _award(db, pred.user_id, "joker_victim", match.id)
+                _award(db, pred.user_id, "joker_victim", competition_id, match.id)
 
     user_ids = {p.user_id for p in predictions}
     for uid in user_ids:
-        _check_hot_streak(db, uid)
+        _check_hot_streak(db, uid, competition_id)
 
-    _check_iron_man(db, match)
+    _check_iron_man(db, match, competition_id)
 
     # ── 2. League-scoped comparison badges ───────────────────────────────────
-    leagues = db.query(League).all()
+    leagues = db.query(League).filter(League.competition_id == competition_id).all()
     for league in leagues:
         member_ids = {
             r.user_id
@@ -147,7 +153,7 @@ def evaluate_badges_after_result(
         # lone_wolf
         if wrong_pct >= 0.70 and len(correct_preds) <= 1:
             for p in correct_preds:
-                _award(db, p.user_id, "lone_wolf", match.id, league.id)
+                _award(db, p.user_id, "lone_wolf", competition_id, match.id, league.id)
 
         # sheep — majority was wrong, and you were in that majority
         if wrong_pct > 0.5:
@@ -159,7 +165,7 @@ def evaluate_badges_after_result(
             for p in league_preds:
                 pred_oc = get_outcome(p.pred_goals1, p.pred_goals2)
                 if pred_oc.value == majority_outcome and pred_oc != res_outcome:
-                    _award(db, p.user_id, "sheep", match.id, league.id)
+                    _award(db, p.user_id, "sheep", competition_id, match.id, league.id)
 
         # comeback_king
         from app.services.ranking_service import get_user_positions
@@ -170,10 +176,10 @@ def evaluate_badges_after_result(
                 continue
             new_rank = new_pos.get(uid, old_rank)
             if old_rank - new_rank >= 5:
-                _award(db, uid, "comeback_king", None, league.id)
+                _award(db, uid, "comeback_king", competition_id, None, league.id)
 
         # group_stage_guru
-        _check_group_stage_guru(db, league.id)
+        _check_group_stage_guru(db, league.id, competition_id)
 
     db.commit()
 
@@ -182,48 +188,54 @@ def evaluate_badges_after_result(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _check_hot_streak(db: Session, user_id: int) -> None:
+def _check_hot_streak(db: Session, user_id: int, competition_id: int) -> None:
     finished_preds = (
         db.query(Prediction)
         .join(Match, Prediction.match_id == Match.id)
         .filter(
             Prediction.user_id == user_id,
+            Match.competition_id == competition_id,
             Match.is_finished == True,
             Prediction.points.isnot(None),
         )
         .order_by(Match.kickoff_utc)
         .all()
     )
-    if len(finished_preds) < 3:
+    if len(finished_preds) < HOT_STREAK_LENGTH:
         return
-    for i in range(len(finished_preds) - 2):
-        if all(p.points >= 10 for p in finished_preds[i: i + 3]):
-            _award(db, user_id, "hot_streak")
+    for i in range(len(finished_preds) - HOT_STREAK_LENGTH + 1):
+        window = finished_preds[i: i + HOT_STREAK_LENGTH]
+        if all(p.points >= HOT_STREAK_MIN_POINTS for p in window):
+            _award(db, user_id, "hot_streak", competition_id)
             return
 
 
-def _check_iron_man(db: Session, match: Match) -> None:
+def _check_iron_man(db: Session, match: Match, competition_id: int) -> None:
     phase_matches = db.query(Match).filter(Match.phase_id == match.phase_id).all()
     if not all(m.is_finished for m in phase_matches):
         return
     match_ids = {m.id for m in phase_matches}
     match_count = len(match_ids)
+
+    pred_counts = dict(
+        db.query(Prediction.user_id, func.count(Prediction.id))
+        .filter(Prediction.match_id.in_(match_ids))
+        .group_by(Prediction.user_id)
+        .all()
+    )
     for user in db.query(User).all():
-        pred_count = (
-            db.query(func.count(Prediction.id))
-            .filter(Prediction.user_id == user.id,
-                    Prediction.match_id.in_(match_ids))
-            .scalar()
-        )
-        if pred_count == match_count:
-            _award(db, user.id, "iron_man")
+        if pred_counts.get(user.id, 0) == match_count:
+            _award(db, user.id, "iron_man", competition_id)
 
 
-def _check_group_stage_guru(db: Session, league_id: int) -> None:
+def _check_group_stage_guru(db: Session, league_id: int, competition_id: int) -> None:
     from app.models.models import Phase
     group_phases = (
         db.query(Phase)
-        .filter(Phase.order_index.in_(GROUP_PHASE_ORDER_INDICES))
+        .filter(
+            Phase.competition_id == competition_id,
+            Phase.is_group_stage == True,
+        )
         .all()
     )
     if not group_phases:
@@ -257,6 +269,6 @@ def _check_group_stage_guru(db: Session, league_id: int) -> None:
     top_pts = user_points[0].pts
     for row in user_points:
         if row.pts == top_pts:
-            _award(db, row.user_id, "group_stage_guru", None, league_id)
+            _award(db, row.user_id, "group_stage_guru", competition_id, None, league_id)
         else:
             break

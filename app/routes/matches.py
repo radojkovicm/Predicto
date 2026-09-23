@@ -8,15 +8,17 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
+from app.auth.csrf import csrf_token
 from app.auth.deps import require_login
 from app.auth.flash import get_flashes
 from app.db import get_db
-from app.models.models import Match, Phase, Prediction, User
+from app.models.models import Competition, Match, Phase, Prediction, User
 from app.services import lock_service, stats_service
 from app.services.league_service import resolve_league
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals["csrf_token"] = csrf_token
 TZ_DISPLAY = pytz.timezone("Europe/Ljubljana")
 
 
@@ -40,17 +42,29 @@ async def match_list(
     current_user: User = Depends(require_login),
     db: Session = Depends(get_db),
 ):
-    phases = db.query(Phase).order_by(Phase.order_index).all()
-
-    matches_query = (
-        db.query(Match)
-        .options(joinedload(Match.phase))
-        .order_by(Match.kickoff_utc)
-    )
+    # Only the single active competition is predictable day-to-day — finished
+    # competitions (e.g. a past World Cup) belong in the admin archive, not here.
+    active_competition = db.query(Competition).filter(Competition.status == "active").first()
+    if not active_competition:
+        phases = []
+        matches_query = db.query(Match).filter(False)
+    else:
+        phases = (
+            db.query(Phase)
+            .filter(Phase.competition_id == active_competition.id)
+            .order_by(Phase.order_index)
+            .all()
+        )
+        matches_query = (
+            db.query(Match)
+            .options(joinedload(Match.phase))
+            .filter(Match.competition_id == active_competition.id)
+            .order_by(Match.kickoff_utc)
+        )
     if phase_id:
         # Phase tab: show ALL matches in that phase (full history + upcoming)
         matches_query = matches_query.filter(Match.phase_id == phase_id)
-    else:
+    elif active_competition:
         # "All" tab: admin must have marked it visible AND
         # it's either not finished yet OR finished within the 12h grace period.
         # Admin can still force-hide by toggling is_visible=False (takes effect immediately).
@@ -116,7 +130,9 @@ async def match_detail(
         .filter(Match.id == match_id)
         .first()
     )
-    if not match:
+    if not match or match.competition.status != "active":
+        # Non-active (draft/finished) competitions are only browsable via the
+        # admin archive — a direct/bookmarked link must not leak them.
         return RedirectResponse("/matches", status_code=302)
 
     locked = lock_service.is_locked(match)
@@ -129,7 +145,7 @@ async def match_detail(
         Prediction.match_id == match_id,
     ).first()
 
-    joker_used_phase = (
+    jokers_used_in_phase_query = (
         db.query(Prediction)
         .join(Match, Prediction.match_id == Match.id)
         .filter(
@@ -137,10 +153,13 @@ async def match_detail(
             Match.phase_id == match.phase_id,
             Prediction.is_joker == True,
         )
-        .first()
     )
+    if user_pred is not None:
+        jokers_used_in_phase_query = jokers_used_in_phase_query.filter(Prediction.id != user_pred.id)
+    jokers_used_in_phase = jokers_used_in_phase_query.count()
+
     can_use_joker = match.phase.joker_allowed and (
-        joker_used_phase is None or (user_pred and user_pred.is_joker)
+        jokers_used_in_phase < match.competition.jokers_per_phase
     )
 
     # Resolve league context for stats

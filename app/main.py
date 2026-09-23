@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -8,8 +8,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from config.config import settings
+from app.auth.csrf import verify_csrf
 from app.auth.deps import NeedsLoginException, NeedsAdminException
-from app.routes import auth, info, integration, matches, predictions, profile, ranking
+from app.routes import auth, info, integration, join, matches, predictions, profile, ranking
 from app.routes import settings as settings_routes
 from app.routes import admin as admin_routes
 
@@ -41,15 +42,17 @@ app.add_middleware(SlowAPIMiddleware)
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Routes
-app.include_router(auth.router)
-app.include_router(matches.router)
-app.include_router(predictions.router)
-app.include_router(ranking.router)
-app.include_router(profile.router)
-app.include_router(info.router)
-app.include_router(settings_routes.router)
-app.include_router(admin_routes.router, prefix="/admin")
+# Routes — CSRF-checked everywhere except /api (token-authed, no session/cookies involved)
+_csrf = [Depends(verify_csrf)]
+app.include_router(auth.router, dependencies=_csrf)
+app.include_router(join.router, dependencies=_csrf)
+app.include_router(matches.router, dependencies=_csrf)
+app.include_router(predictions.router, dependencies=_csrf)
+app.include_router(ranking.router, dependencies=_csrf)
+app.include_router(profile.router, dependencies=_csrf)
+app.include_router(info.router, dependencies=_csrf)
+app.include_router(settings_routes.router, dependencies=_csrf)
+app.include_router(admin_routes.router, prefix="/admin", dependencies=_csrf)
 app.include_router(integration.router, prefix="/api")
 
 

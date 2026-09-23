@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ competition.name }} — Archive{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/archive" class="back-link">← Archive</a>
+  <h2>{{ competition.name }}</h2>
+  <div class="profile-meta">
+    Finished {{ to_local(competition.finished_at).strftime('%d %b %Y') if competition.finished_at else '—' }}
+  </div>
+</div>
+
+<section class="card">
+  <h3>Leagues ({{ leagues | length }})</h3>
+  {% if leagues %}
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>League</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for league in leagues %}
+            <tr>
+              <td>{{ league.name }}</td>
+              <td class="action-cell">
+                <a href="/admin/archive/{{ competition.id }}/leagues/{{ league.id }}" class="btn btn-sm btn-secondary">View Leaderboard</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="empty-state">No leagues in this competition.</p>
+  {% endif %}
+</section>
+{% endblock %}

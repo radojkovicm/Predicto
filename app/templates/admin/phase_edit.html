@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit Phase{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="/admin/competitions/{{ phase.competition_id }}/edit" class="back-link">← {{ phase.competition.name }}</a>
+  <h2>Edit Phase</h2>
+</div>
+
+<section class="card" style="max-width:500px">
+  {% if phase.competition.status == 'finished' %}
+    <p class="help-text">This phase belongs to a finished competition and is read-only history.</p>
+  {% else %}
+  <form method="post" action="/admin/competitions/{{ phase.competition_id }}/phases/{{ phase.id }}/edit" class="settings-form">
+    <div class="form-group">
+      <label>Name</label>
+      <input type="text" name="name" required maxlength="100" value="{{ phase.name }}">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Order</label>
+        <input type="number" name="order_index" required min="1" value="{{ phase.order_index }}">
+      </div>
+      <div class="form-group">
+        <label>Point Multiplier</label>
+        <input type="number" name="point_multiplier" step="0.01" required value="{{ phase.point_multiplier }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="checkbox-label">
+        <input type="checkbox" name="joker_allowed" value="1" {% if phase.joker_allowed %}checked{% endif %}> Joker Allowed
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="is_group_stage" value="1" {% if phase.is_group_stage %}checked{% endif %}> Group Stage
+      </label>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="/admin/competitions/{{ phase.competition_id }}/edit" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

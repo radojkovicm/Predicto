@@ -9,22 +9,61 @@
 <!-- Create league -->
 <section class="card">
   <h3>Create League</h3>
-  <form method="post" action="/admin/leagues" class="inline-form">
-    <input type="text" name="name" placeholder="League name (e.g. Work, Friends)" required style="flex:1;min-width:200px">
-    <button type="submit" class="btn btn-primary">Create</button>
-  </form>
+  {% if competitions %}
+    <form method="post" action="/admin/leagues" class="inline-form">
+      <input type="text" name="name" placeholder="League name (e.g. Work, Friends)" required style="flex:1;min-width:200px">
+      <select name="competition_id" required>
+        {% for c in competitions %}
+          <option value="{{ c.id }}" {% if selected_competition and c.id == selected_competition.id %}selected{% endif %}>
+            {{ c.name }} ({{ c.status }})
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+  {% else %}
+    <p class="empty-state">No competitions yet. <a href="/admin/competitions/new">Create one first</a>.</p>
+  {% endif %}
 </section>
 
 <!-- League list -->
-{% if leagues %}
-  {% for league in leagues %}
+{% set live_leagues = leagues | rejectattr('archived_at') | list %}
+{% set archived_leagues = leagues | selectattr('archived_at') | list %}
+
+{% if live_leagues %}
+  {% for league in live_leagues %}
     <section class="card">
       <div class="league-card-header">
         <div>
           <h3>🏆 {{ league.name }}</h3>
-          <small class="text-muted">{{ member_map[league.id] | length }} member(s)</small>
+          <small class="text-muted">{{ member_map[league.id] | length }} member(s) · {{ league.competition.name }}</small>
         </div>
-        <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+        <div style="display:flex;gap:.5rem">
+          <a href="/admin/leagues/{{ league.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+          <button type="button" class="btn btn-sm btn-danger-outline"
+                  onclick="confirmDelete('Archive {{ league.name }}? Members will stop seeing it in ranking/profile, even though {{ league.competition.name }} stays active. You can unarchive it anytime.', '/admin/leagues/{{ league.id }}/archive')">Archive</button>
+        </div>
+      </div>
+
+      <!-- Invite link -->
+      <div class="form-group" style="margin-bottom:.75rem">
+        <label>Invite Link <small style="font-weight:400;color:var(--text-muted)">(share it — people sign themselves up, pending your approval)</small></label>
+        {% if league.join_code %}
+          <div class="inline-form">
+            <input type="text" readonly value="{{ request.base_url }}join/{{ league.join_code }}" style="flex:1;min-width:200px" onclick="this.select()">
+            <form method="post" action="/admin/leagues/{{ league.id }}/generate-invite" style="display:inline">
+              <button type="submit" class="btn btn-sm btn-secondary">Regenerate</button>
+            </form>
+            <form method="post" action="/admin/leagues/{{ league.id }}/revoke-invite" style="display:inline"
+                  onsubmit="return confirm('Revoke the invite link for {{ league.name }}? The current link will stop working.')">
+              <button type="submit" class="btn btn-sm btn-danger-outline">Revoke</button>
+            </form>
+          </div>
+        {% else %}
+          <form method="post" action="/admin/leagues/{{ league.id }}/generate-invite">
+            <button type="submit" class="btn btn-sm btn-primary">Generate Invite Link</button>
+          </form>
+        {% endif %}
       </div>
 
       <!-- Add user to league -->
@@ -58,9 +97,41 @@
       {% endif %}
     </section>
   {% endfor %}
-{% else %}
+{% elif not archived_leagues %}
   <div class="card">
     <p class="empty-state">No leagues created yet.</p>
   </div>
+{% endif %}
+
+{% if archived_leagues %}
+  <section class="card">
+    <h3>📦 Archived Leagues ({{ archived_leagues | length }})</h3>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Competition</th>
+            <th>Members</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for league in archived_leagues %}
+            <tr>
+              <td>{{ league.name }}</td>
+              <td>{{ league.competition.name }}</td>
+              <td>{{ member_map[league.id] | length }}</td>
+              <td class="action-cell">
+                <form method="post" action="/admin/leagues/{{ league.id }}/unarchive" style="display:inline">
+                  <button type="submit" class="btn btn-sm btn-success">Unarchive</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 {% endif %}
 {% endblock %}

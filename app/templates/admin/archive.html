@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% block title %}Archive{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Archive</h2>
+  <p class="subtitle">Finished competitions — read-only history.</p>
+</div>
+
+<section class="card">
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Competition</th>
+          <th>Finished</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for competition in competitions %}
+          <tr>
+            <td><strong>{{ competition.name }}</strong></td>
+            <td>{{ to_local(competition.finished_at).strftime('%d %b %Y') if competition.finished_at else '—' }}</td>
+            <td class="action-cell">
+              <a href="/admin/archive/{{ competition.id }}" class="btn btn-sm btn-secondary">View</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="empty-state">No finished competitions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

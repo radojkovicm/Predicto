@@ -8,6 +8,8 @@
 *.sqlite3
 *.dump
 *.sql
+/db_dump/*
+!/db_dump/.gitkeep
 
 # Internal notes with infra details (VPS IP, SSH user, private domain)
 setup_deployment.md

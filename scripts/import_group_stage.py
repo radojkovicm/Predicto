@@ -2,7 +2,10 @@
 """Import Group Stage 1/2/3 matches from embedded CSV.
 Kickoff times in CSV are Europe/Ljubljana — converted to UTC for storage.
 Safe to re-run: skips matches that already exist (same phase + teams + kickoff).
+
+Usage: python scripts/import_group_stage.py --competition-id <id>
 """
+import argparse
 import csv
 import io
 import os
@@ -14,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
 from app.db import SessionLocal
-from app.models.models import Match, Phase
+from app.models.models import Competition, Match, Phase
 
 TZ_LJU = pytz.timezone("Europe/Ljubljana")
 
@@ -101,10 +104,18 @@ def lju_to_utc(s: str) -> datetime:
     return TZ_LJU.localize(naive).astimezone(pytz.utc)
 
 
-def main():
+def main(competition_id: int):
     db = SessionLocal()
     try:
-        phases = {p.name: p.id for p in db.query(Phase).all()}
+        competition = db.query(Competition).filter(Competition.id == competition_id).first()
+        if not competition:
+            print(f"Competition with id {competition_id} not found.")
+            sys.exit(1)
+
+        phases = {
+            p.name: p.id
+            for p in db.query(Phase).filter(Phase.competition_id == competition.id).all()
+        }
         if not phases:
             print("No phases found — run scripts/seed_phases.py first.")
             sys.exit(1)
@@ -139,6 +150,7 @@ def main():
             db.add(
                 Match(
                     phase_id=phase_id,
+                    competition_id=competition.id,
                     team1_code=row["team1_code"],
                     team1_name=row["team1_name"],
                     team2_code=row["team2_code"],
@@ -158,4 +170,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--competition-id", type=int, required=True, help="ID of the competition to import matches into")
+    args = parser.parse_args()
+    main(args.competition_id)

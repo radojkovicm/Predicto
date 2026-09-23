@@ -2,14 +2,23 @@
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.models.models import League, UserLeague
+from app.models.models import Competition, League, UserLeague
 
 
 def get_user_leagues(db: Session, user_id: int) -> list[League]:
+    """Leagues a user belongs to, excluding leagues of finished competitions
+    and leagues that were individually archived (a league can retire early
+    while its competition and other leagues stay active).
+
+    Finished competitions are only browsable via the admin archive views.
+    """
     return (
         db.query(League)
         .join(UserLeague, League.id == UserLeague.league_id)
+        .join(Competition, League.competition_id == Competition.id)
         .filter(UserLeague.user_id == user_id)
+        .filter(Competition.status != "finished")
+        .filter(League.archived_at.is_(None))
         .order_by(League.name)
         .all()
     )

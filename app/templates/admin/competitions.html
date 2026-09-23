@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}Competitions{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Competitions</h2>
+</div>
+
+<section class="card">
+  <h3>Create Competition</h3>
+  <p class="help-text">Set up scoring rules for a new competition. New competitions start as a draft.</p>
+  <a href="/admin/competitions/new" class="btn btn-primary">+ New Competition</a>
+</section>
+
+<section class="card">
+  <h3>All Competitions ({{ competitions | length }})</h3>
+  <div class="table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Finished</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for competition in competitions %}
+          <tr>
+            <td><strong>{{ competition.name }}</strong></td>
+            <td>
+              {% if competition.status == 'active' %}🟢 Active
+              {% elif competition.status == 'finished' %}✅ Finished
+              {% else %}📝 Draft
+              {% endif %}
+            </td>
+            <td><small>{{ to_local(competition.created_at).strftime('%d %b %Y') if competition.created_at else '—' }}</small></td>
+            <td><small>{{ to_local(competition.finished_at).strftime('%d %b %Y') if competition.finished_at else '—' }}</small></td>
+            <td class="action-cell">
+              <a href="/admin/competitions/{{ competition.id }}/edit" class="btn btn-sm btn-secondary">Edit</a>
+              {% if competition.status == 'draft' %}
+                <form method="post" action="/admin/competitions/{{ competition.id }}/activate" style="display:inline">
+                  <button type="submit" class="btn btn-sm btn-primary">Activate</button>
+                </form>
+              {% endif %}
+              {% if competition.status == 'active' %}
+                <button type="button" class="btn btn-sm btn-danger"
+                        onclick="confirmDelete('Finish {{ competition.name }}? It becomes read-only history and its matches/predictions are hidden from users (can be reopened later).', '/admin/competitions/{{ competition.id }}/finish')">Finish</button>
+              {% endif %}
+              {% if competition.status == 'finished' %}
+                <button type="button" class="btn btn-sm btn-secondary"
+                        onclick="confirmDelete('Reopen {{ competition.name }}? It becomes live again and visible to all users.', '/admin/competitions/{{ competition.id }}/reopen')">Reopen</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="empty-state">No competitions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

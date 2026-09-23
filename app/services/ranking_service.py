@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, and_, or_, text
 
-from app.models.models import User, Prediction, Match, UserBadge, UserLeague
+from app.models.models import User, Prediction, Match, UserBadge, UserLeague, League
 
 
 def get_leaderboard(db: Session, league_id: int) -> list[dict]:
@@ -13,6 +13,10 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
       3. Correct exact scores DESC
       4. MAX(updated_at) ASC — earliest last prediction
     """
+    league = db.query(League).get(league_id)
+    if league is None:
+        return []
+
     member_ids = [
         r.user_id
         for r in db.query(UserLeague.user_id).filter(UserLeague.league_id == league_id).all()
@@ -20,7 +24,15 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
     if not member_ids:
         return []
 
+    # A user may have predictions from other leagues/competitions too;
+    # every aggregate below is guarded by this so only this league's
+    # competition contributes. The outer joins are untouched, so
+    # zero-prediction members still show up (Match is NULL -> guard is
+    # NULL/false there, and coalesce() below still yields 0).
+    in_competition = Match.competition_id == league.competition_id
+
     correct_tip_cond = and_(
+        in_competition,
         Match.is_finished,
         or_(
             and_(Prediction.pred_goals1 > Prediction.pred_goals2,
@@ -32,6 +44,7 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
         ),
     )
     exact_score_cond = and_(
+        in_competition,
         Match.is_finished,
         Prediction.pred_goals1 == Match.result_goals1,
         Prediction.pred_goals2 == Match.result_goals2,
@@ -43,10 +56,12 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
             User.username,
             User.first_name,
             User.last_name,
-            func.coalesce(func.sum(Prediction.points), 0).label("total_points"),
+            func.coalesce(
+                func.sum(case((in_competition, Prediction.points), else_=0)), 0
+            ).label("total_points"),
             func.count(case((correct_tip_cond, 1), else_=None)).label("correct_tips"),
             func.count(case((exact_score_cond, 1), else_=None)).label("exact_scores"),
-            func.max(Prediction.updated_at).label("last_pred_at"),
+            func.max(case((in_competition, Prediction.updated_at), else_=None)).label("last_pred_at"),
         )
         .filter(User.id.in_(member_ids))
         .outerjoin(Prediction, User.id == Prediction.user_id)
@@ -68,6 +83,7 @@ def get_leaderboard(db: Session, league_id: int) -> list[dict]:
         .filter(
             UserBadge.user_id.in_(member_ids),
             UserBadge.is_active == True,
+            UserBadge.competition_id == league.competition_id,
             or_(UserBadge.league_id == league_id, UserBadge.league_id == None),
         )
         .all()
