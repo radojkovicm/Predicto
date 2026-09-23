@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -9,6 +9,16 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(False, description="Enable debug mode (disables HTTPS-only cookies)")
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def _normalize_database_url(cls, v: str) -> str:
+        # Some providers (Neon, Heroku, ...) hand out "postgres://", which
+        # SQLAlchemy 2.x no longer recognizes as a dialect — needs "postgresql://".
+        v = v.strip().strip("'\"")
+        if v.startswith("postgres://"):
+            v = "postgresql://" + v[len("postgres://"):]
+        return v
 
 
 settings = Settings()
