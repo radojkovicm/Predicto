@@ -1,10 +1,13 @@
 # ⚽ Predicto — Score Prediction Game
 
+[![Release](https://img.shields.io/github/v/release/radojkovicm/Predicto?label=release)](https://github.com/radojkovicm/Predicto/releases/latest)
+[![Live demo](https://img.shields.io/badge/demo-predicto--demo.vercel.app-7c73ff)](https://predicto-demo.vercel.app)
+
 A self-hosted score-prediction pool for **any football competition** — a World Cup, a Champions League season, your office's Sunday league, whatever. Admins spin up a competition with its own scoring rules and phases, users predict exact match scores, and a leaderboard tracks the standings per league. **No money involved — for fun only.**
 
-Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framework, dark mode by default.
+Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framework. Modern, mobile-first UI with dark and light themes.
 
-[**Live demo →**](https://predicto-demo.vercel.app) — credentials are shown right on the login page (`admin` / `demo1234`, or `marko` / `demo1234` for a non-admin view). Runs on an ephemeral SQLite seed (see [Deploy to Vercel](#deploy-to-vercel)), so data resets on cold start — it's for a click-through, not for keeping real data.
+[**Live demo →**](https://predicto-demo.vercel.app) — tap one of the demo accounts on the login page to sign in (`admin` / `demo1234`, or `marko` / `demo1234` for a non-admin view). Runs on an ephemeral SQLite seed (see [Deploy to Vercel](#deploy-to-vercel)), so data resets on cold start — it's for a click-through, not for keeping real data.
 
 ---
 
@@ -14,9 +17,17 @@ Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framewo
 |---|---|
 | ![Matches list](docs/screenshots/matches.png) | ![Leaderboard](docs/screenshots/ranking.png) |
 
-| Match detail & stats | Admin panel |
+| Making a tip | Admin panel |
 |---|---|
 | ![Match detail](docs/screenshots/match_detail.png) | ![Admin panel](docs/screenshots/admin.png) |
+
+**On a phone** — bottom tab bar, big +/− buttons, two taps to a tip:
+
+<p>
+  <img src="docs/screenshots/mobile_matches.png" alt="Matches on a phone" width="260">
+  &nbsp;
+  <img src="docs/screenshots/mobile_tip.png" alt="Tipping on a phone" width="260">
+</p>
 
 ---
 
@@ -32,7 +43,7 @@ Built with **FastAPI + SQLAlchemy + Jinja2** — server-rendered, no SPA framewo
 - **Achievement badges**, personal stats, and per-match prediction history
 - **Admin panel** — create/edit competitions, phases and matches, enter results, manage users and leagues, audit logs, soft-delete users while preserving history
 - **Excel import** for bulk-loading a competition's fixture list
-- **Dark mode** by default, mobile-friendly
+- **Modern, mobile-first UI** — dark and light themes, bottom tab bar on phones, +/− score steppers, kickoff countdown, "N matches waiting for your tip" reminder banner, leaderboard podium and player avatars
 - **n8n-friendly reminder API** for nudging users who haven't predicted yet
 
 ---
@@ -288,6 +299,10 @@ config/            Settings via pydantic-settings
 scripts/           create_admin, backup, optional sample-data seeders
 tests/             Unit + integration tests
 ```
+
+## Versioning
+
+**v1.0.0 is the final, stable release.** See [CHANGELOG.md](CHANGELOG.md) and the [Releases page](https://github.com/radojkovicm/Predicto/releases).
 
 ## License
 

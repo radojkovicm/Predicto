@@ -127,6 +127,19 @@ window.confirmDelete = function (title, actionUrl) {
   });
 })();
 
+// Demo login: tapping a sample account fills the form in
+document.addEventListener("click", function (e) {
+  const btn = e.target.closest && e.target.closest(".demo-cred");
+  if (!btn) return;
+  const user = document.getElementById("username");
+  const pass = document.getElementById("password");
+  if (user && pass) {
+    user.value = btn.dataset.user;
+    pass.value = btn.dataset.pass;
+    pass.focus();
+  }
+});
+
 // Auto-dismiss flash messages after 5 s
 (function () {
   setTimeout(function () {

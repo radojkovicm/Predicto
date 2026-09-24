@@ -18,11 +18,15 @@
     </div>
 
     {% if demo_mode %}
-      <div class="flash flash-info flash-sticky">
-        <strong>Demo mode</strong> — try it out with:<br>
-        Admin: <code>admin</code> / <code>demo1234</code><br>
-        Player: <code>marko</code> / <code>demo1234</code><br>
-        Data resets whenever this deployment cold-starts.
+      <div class="demo-box">
+        <div class="demo-title">Demo · tap an account to fill it in</div>
+        <button type="button" class="demo-cred" data-user="admin" data-pass="demo1234">
+          <span class="demo-role">Admin</span><code>admin</code><span class="demo-sep">/</span><code>demo1234</code>
+        </button>
+        <button type="button" class="demo-cred" data-user="marko" data-pass="demo1234">
+          <span class="demo-role">Player</span><code>marko</code><span class="demo-sep">/</span><code>demo1234</code>
+        </button>
+        <div class="demo-note">Data resets whenever this deployment cold-starts.</div>
       </div>
     {% endif %}
 
@@ -46,6 +50,6 @@
   </div>
 </div>
 {{ theme_toggle("theme-toggle-login") }}
-<script src="/static/js/main.js?v=5"></script>
+<script src="/static/js/main.js?v=6"></script>
 </body>
 </html>
