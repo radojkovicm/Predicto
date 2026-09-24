@@ -1,57 +1,62 @@
+{% from "_ui.html" import icon, head_assets, theme_toggle %}
+{% set path = request.url.path %}
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token(request) }}">
-  <title>{% block title %}Predicto{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <title>{% block title %}Predicto{% endblock %} · Predicto</title>
+  {{ head_assets() }}
 </head>
-<body>
+<body class="{% if current_user %}has-tabbar{% endif %}">
 
 <header class="navbar">
   <div class="container navbar-inner">
-    <a href="/" class="brand">⚽ Predicto</a>
+    <a href="/" class="brand"><span class="brand-mark">{{ icon("ball") }}</span>Predicto</a>
     <nav class="nav-links">
       {% if current_user %}
-        <a href="/matches" {% if request.url.path.startswith('/matches') %}class="active"{% endif %}>Matches</a>
-        <a href="/ranking" {% if request.url.path == '/ranking' %}class="active"{% endif %}>Ranking</a>
-        <a href="/profile" {% if request.url.path.startswith('/profile') %}class="active"{% endif %}>Profile</a>
-        <a href="/info" {% if request.url.path == '/info' %}class="active"{% endif %}>Rules</a>
-        <a href="/settings" {% if request.url.path == '/settings' %}class="active"{% endif %}>Settings</a>
+        <a href="/matches" {% if path.startswith('/matches') %}class="active"{% endif %}>{{ icon("calendar") }}Matches</a>
+        <a href="/ranking" {% if path == '/ranking' %}class="active"{% endif %}>{{ icon("trophy") }}Ranking</a>
+        <a href="/profile" {% if path.startswith('/profile') %}class="active"{% endif %}>{{ icon("user") }}Profile</a>
+        <a href="/info" {% if path == '/info' %}class="active"{% endif %}>{{ icon("book") }}Rules</a>
+        <a href="/settings" {% if path == '/settings' %}class="active"{% endif %}>{{ icon("sliders") }}Settings</a>
         {% if current_user.is_admin %}
-          <a href="/admin/matches" {% if request.url.path.startswith('/admin') %}class="active"{% endif %}>Admin</a>
+          <a href="/admin/matches" {% if path.startswith('/admin') %}class="active"{% endif %}>{{ icon("shield") }}Admin</a>
         {% endif %}
         <form action="/logout" method="post" style="display:inline">
-          <button type="submit" class="btn-link">Logout</button>
+          <button type="submit" class="btn-link" title="Logout">{{ icon("logout") }}</button>
         </form>
       {% else %}
         <a href="/login">Login</a>
       {% endif %}
     </nav>
-    <button id="theme-toggle" class="btn-icon" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
-    <button class="hamburger" id="hamburger" aria-label="Menu">☰</button>
+    {{ theme_toggle() }}
+    <button class="hamburger btn-icon" id="hamburger" aria-label="Menu">{{ icon("menu") }}</button>
   </div>
 </header>
 
 <div class="mobile-menu" id="mobile-menu">
   {% if current_user %}
-    <a href="/matches">Matches</a>
-    <a href="/ranking">Ranking</a>
-    <a href="/profile">Profile</a>
-    <a href="/info">Rules</a>
-    {% if current_user.is_admin %}<a href="/admin/matches">Admin</a>{% endif %}
-    <a href="/settings">Settings</a>
+    <a href="/settings">{{ icon("sliders") }}Settings</a>
+    {% if current_user.is_admin %}<a href="/admin/matches">{{ icon("shield") }}Admin</a>{% endif %}
     <form action="/logout" method="post">
-      <button type="submit" class="btn-link">Logout</button>
+      <button type="submit" class="btn-link">{{ icon("logout") }}Logout</button>
     </form>
+  {% else %}
+    <a href="/login">Login</a>
   {% endif %}
 </div>
 
+{% if flashes %}
+  <div class="flash-stack">
+    {% for f in flashes %}
+      <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
 <main class="container main-content">
-  {% for f in flashes %}
-    <div class="flash flash-{{ f.category }}">{{ f.message }}</div>
-  {% endfor %}
   {% block content %}{% endblock %}
 </main>
 
@@ -59,6 +64,16 @@
   <div class="container">Predicto &nbsp;·&nbsp; Developed by Miloš &nbsp;·&nbsp; All times in Europe/Ljubljana</div>
 </footer>
 
-<script src="/static/js/main.js"></script>
+{% if current_user %}
+  <nav class="tabbar" aria-label="Main">
+    <a href="/matches" {% if path.startswith('/matches') %}class="active"{% endif %}>{{ icon("calendar") }}<span>Matches</span></a>
+    <a href="/ranking" {% if path == '/ranking' %}class="active"{% endif %}>{{ icon("trophy") }}<span>Ranking</span></a>
+    <a href="/profile" {% if path.startswith('/profile') %}class="active"{% endif %}>{{ icon("user") }}<span>Profile</span></a>
+    <a href="/info" {% if path == '/info' %}class="active"{% endif %}>{{ icon("book") }}<span>Rules</span></a>
+    <button type="button" id="hamburger-tab" aria-label="More">{{ icon("more") }}<span>More</span></button>
+  </nav>
+{% endif %}
+
+<script src="/static/js/main.js?v=5"></script>
 </body>
 </html>

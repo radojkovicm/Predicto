@@ -1,3 +1,4 @@
+{% from "_ui.html" import icon, head_assets, theme_toggle %}
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -5,19 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="csrf-token" content="{{ csrf_token(request) }}">
   <title>Login — Predicto</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  {{ head_assets() }}
 </head>
 <body class="login-page">
 <div class="login-wrapper">
   <div class="login-card">
     <div class="login-header">
-      <span class="login-logo">⚽</span>
+      <span class="login-logo">{{ icon("ball") }}</span>
       <h1>Predicto</h1>
       <p>Developed by Miloš</p>
     </div>
 
     {% if demo_mode %}
-      <div class="flash flash-info">
+      <div class="flash flash-info flash-sticky">
         <strong>Demo mode</strong> — try it out with:<br>
         Admin: <code>admin</code> / <code>demo1234</code><br>
         Player: <code>marko</code> / <code>demo1234</code><br>
@@ -44,7 +45,7 @@
     </form>
   </div>
 </div>
-<button id="theme-toggle" class="btn-icon theme-toggle-login" aria-label="Toggle dark mode">🌙</button>
-<script src="/static/js/main.js"></script>
+{{ theme_toggle("theme-toggle-login") }}
+<script src="/static/js/main.js?v=5"></script>
 </body>
 </html>

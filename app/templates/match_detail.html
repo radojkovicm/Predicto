@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ match.team1_name }} vs {{ match.team2_name }}{% endblock %}
 
+{% from "_ui.html" import icon, flag, avatar %}
 {% block content %}
 <div class="page-header">
-  <a href="/matches" class="back-link">← Matches</a>
+  <a href="/matches" class="back-link">{{ icon("chevron-left") }} All matches</a>
 </div>
 
 <!-- Match header -->
@@ -11,36 +12,27 @@
   <div class="match-hero-phase">{{ match.phase.name }}</div>
   <div class="match-hero-teams">
     <div class="hero-team">
-      {% if match.team1_code != 'tbd' %}
-        <img src="https://flagcdn.com/40x30/{{ match.team1_code }}.png"
-             onerror="this.outerHTML='<span class=\'flag-placeholder flag-placeholder-lg\'></span>'"
-             alt="{{ match.team1_name }}" class="flag-lg">
-      {% else %}
-        <span class="flag-placeholder flag-placeholder-lg"></span>
-      {% endif %}
+      {{ flag(match.team1_code, match.team1_name, "lg") }}
       <span>{{ match.team1_name }}</span>
     </div>
     <div class="hero-score">
       {% if match.is_finished %}
         <span class="final-score">{{ match.result_goals1 }}:{{ match.result_goals2 }}</span>
-        <div class="final-label">Final</div>
+        <div class="final-label">Full time</div>
       {% else %}
-        <span class="kickoff-time">{{ to_local(match.kickoff_utc).strftime('%d %b %Y %H:%M') }}</span>
+        {% set local_kick = to_local(match.kickoff_utc) %}
+        <span class="kickoff-time">{{ local_kick.strftime('%H:%M') }}</span>
+        <span class="kickoff-date">{{ local_kick.strftime('%a, %d %b %Y') }}</span>
         {% if locked %}
-          <div class="lock-status locked">🔒 Locked</div>
+          <div class="lock-status locked">{{ icon("lock") }} Locked</div>
         {% else %}
-          <div class="lock-status open">🟢 Open</div>
+          <div class="lock-status open"><span class="dot"></span> Open for tips</div>
+          <div><span class="countdown" data-kickoff="{{ local_kick.isoformat() }}"></span></div>
         {% endif %}
       {% endif %}
     </div>
     <div class="hero-team">
-      {% if match.team2_code != 'tbd' %}
-        <img src="https://flagcdn.com/40x30/{{ match.team2_code }}.png"
-             onerror="this.outerHTML='<span class=\'flag-placeholder flag-placeholder-lg\'></span>'"
-             alt="{{ match.team2_name }}" class="flag-lg">
-      {% else %}
-        <span class="flag-placeholder flag-placeholder-lg"></span>
-      {% endif %}
+      {{ flag(match.team2_code, match.team2_name, "lg") }}
       <span>{{ match.team2_name }}</span>
     </div>
   </div>
@@ -49,50 +41,32 @@
 <!-- Prediction form -->
 {% if not locked %}
   <section class="card">
-    <h3>Your Prediction</h3>
+    <h3>{{ 'Your tip' if user_pred else 'Make your tip' }}</h3>
     <form method="post" action="/predictions" class="pred-form">
       <input type="hidden" name="match_id" value="{{ match.id }}">
 
       <div class="pred-scoreboard">
-        <!-- Team 1 -->
-        <div class="pred-team-col">
-          <div class="pred-team-name">
-            {% if match.team1_code != 'tbd' %}
-              <img src="https://flagcdn.com/24x18/{{ match.team1_code }}.png"
-                   onerror="this.style.display='none'" alt="" class="flag">
-            {% endif %}
-            {{ match.team1_name }}
+        {% for side in [1, 2] %}
+          {% set team_name = match.team1_name if side == 1 else match.team2_name %}
+          {% set team_code = match.team1_code if side == 1 else match.team2_code %}
+          {% set current = (user_pred.pred_goals1 if side == 1 else user_pred.pred_goals2) if user_pred else '' %}
+          {% if side == 2 %}
+            <div class="pred-sep-col"><span class="pred-sep-colon">:</span></div>
+          {% endif %}
+          <div class="pred-team-col">
+            <div class="pred-team-name">{{ team_name }}</div>
+            <div class="stepper">
+              <button type="button" class="step-btn" data-step="-1" data-target="goals{{ side }}" aria-label="One goal less for {{ team_name }}">−</button>
+              <input type="number" name="pred_goals{{ side }}" min="0" max="99" required
+                     inputmode="numeric" placeholder="0"
+                     value="{{ current }}"
+                     class="goals-input" id="goals{{ side }}"
+                     aria-label="{{ team_name }} goals">
+              <button type="button" class="step-btn" data-step="1" data-target="goals{{ side }}" aria-label="One goal more for {{ team_name }}">+</button>
+            </div>
+            <span class="pred-hint">goals</span>
           </div>
-          <input type="number" name="pred_goals1" min="0" max="99" required
-                 inputmode="numeric" placeholder="0"
-                 value="{{ user_pred.pred_goals1 if user_pred else '' }}"
-                 class="goals-input" id="goals1"
-                 aria-label="{{ match.team1_name }} goals">
-          <span class="pred-hint">goals</span>
-        </div>
-
-        <!-- Separator -->
-        <div class="pred-sep-col">
-          <span class="pred-sep-colon">:</span>
-          <span class="pred-sep-label">vs</span>
-        </div>
-
-        <!-- Team 2 -->
-        <div class="pred-team-col">
-          <div class="pred-team-name">
-            {% if match.team2_code != 'tbd' %}
-              <img src="https://flagcdn.com/24x18/{{ match.team2_code }}.png"
-                   onerror="this.style.display='none'" alt="" class="flag">
-            {% endif %}
-            {{ match.team2_name }}
-          </div>
-          <input type="number" name="pred_goals2" min="0" max="99" required
-                 inputmode="numeric" placeholder="0"
-                 value="{{ user_pred.pred_goals2 if user_pred else '' }}"
-                 class="goals-input" id="goals2"
-                 aria-label="{{ match.team2_name }} goals">
-          <span class="pred-hint">goals</span>
-        </div>
+        {% endfor %}
       </div>
 
       {% if can_use_joker %}
@@ -100,8 +74,8 @@
           <label class="checkbox-label">
             <input type="checkbox" name="is_joker" value="1"
                    {% if user_pred and user_pred.is_joker %}checked{% endif %}>
-            <span>🃏 Use Joker</span>
-            <small>(+8 if correct, −5 if wrong — max 1 per phase)</small>
+            <span>🃏 Play your Joker</span>
+            <small>+8 if correct, −5 if wrong · one per phase</small>
           </label>
         </div>
       {% elif user_pred and user_pred.is_joker %}
@@ -110,23 +84,23 @@
         </div>
       {% elif match.phase.joker_allowed %}
         <div class="joker-row joker-used">
-          Joker already used in this phase.
+          🃏 Joker already used in this phase.
         </div>
       {% endif %}
 
       <button type="submit" class="btn btn-primary btn-predict">
-        {{ '💾 Update Prediction' if user_pred else '✅ Save Prediction' }}
+        {{ 'Update tip' if user_pred else 'Save tip' }}
       </button>
     </form>
   </section>
 {% elif user_pred %}
   <section class="card">
-    <h3>Your Prediction</h3>
+    <h3>Your tip</h3>
     <div class="pred-summary">
       <span class="pred-score">{{ user_pred.pred_goals1 }}:{{ user_pred.pred_goals2 }}</span>
       {% if user_pred.is_joker %}<span class="joker-icon">🃏 Joker</span>{% endif %}
       {% if match.is_finished and user_pred.points is not none %}
-        <span class="points-big">{{ user_pred.points }} pts</span>
+        <span class="points-big">{{ '+' if user_pred.points > 0 }}{{ user_pred.points }} pts</span>
       {% endif %}
     </div>
   </section>
@@ -135,7 +109,7 @@
 <!-- Stats (after lock) -->
 {% if locked and stats %}
   <section class="card">
-    <h3>Prediction Statistics
+    <h3>How everyone tipped
       {% if active_league %}
         <span class="league-context-tag">{{ active_league.name }}</span>
       {% endif %}
@@ -182,7 +156,7 @@
       </div>
     {% endif %}
 
-    <h4>All Predictions</h4>
+    <h4>All tips</h4>
     <div class="pred-table-wrap">
       <table class="pred-table">
         <thead>
@@ -196,8 +170,8 @@
         <tbody>
           {% for p in stats.all_predictions %}
             <tr class="{% if match.is_finished %}{% if p.points is not none and p.points >= 10 %}row-good{% elif p.points is not none and p.points > 0 %}row-ok{% elif p.points is not none %}row-bad{% endif %}{% endif %}">
-              <td>{{ p.display_name }}</td>
-              <td>{{ p.pred }}</td>
+              <td><span class="player-link">{{ avatar(p.display_name, p.user_id) }}{{ p.display_name }}</span></td>
+              <td class="num"><strong>{{ p.pred }}</strong></td>
               <td>{{ '🃏' if p.is_joker else '' }}</td>
               {% if match.is_finished %}<td>{{ p.points if p.points is not none else '—' }}</td>{% endif %}
             </tr>

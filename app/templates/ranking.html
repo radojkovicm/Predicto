@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Ranking{% endblock %}
 
+{% from "_ui.html" import avatar %}
 {% block content %}
 <div class="page-header">
   <h2>Leaderboard</h2>
@@ -29,16 +30,35 @@
   {% endif %}
 
   {% if leaderboard %}
+    {% set show_podium = leaderboard | length >= 3 %}
+    {% if show_podium %}
+      <div class="podium">
+        {% for entry in leaderboard[:3] %}
+          {% set is_me = current_user and entry.user_id == current_user.id %}
+          <a href="/profile/{{ entry.user_id }}{% if active_league %}?league_id={{ active_league.id }}{% endif %}"
+             class="podium-spot p{{ loop.index }} {% if is_me %}is-me{% endif %}">
+            <span class="podium-medal">{{ loop.index }}</span>
+            {{ avatar(entry.display_name, entry.user_id, "avatar-lg") }}
+            <span class="podium-name">{{ entry.display_name }}</span>
+            <span class="podium-pts">{{ entry.total_points }}<small>pts</small></span>
+            <span class="podium-badges">
+              {% for code in entry.badges | unique %}{% set name, emoji = badge_display(code) %}<span class="badge-icon" title="{{ name }}">{{ emoji }}</span>{% endfor %}
+            </span>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <div class="table-wrap">
       <table class="leaderboard-table">
         <thead>
           <tr>
-            <th>#</th>
+            <th class="rank-cell">#</th>
             <th>Player</th>
             <th title="Total points">Pts</th>
             <th title="Correct tips (outcome matched)" class="hide-sm">Tips</th>
             <th title="Exact scores" class="hide-sm">Exact</th>
-            <th>Badges</th>
+            <th class="hide-sm">Badges</th>
           </tr>
         </thead>
         <tbody>
@@ -54,14 +74,15 @@
               </td>
               <td>
                 <a href="/profile/{{ entry.user_id }}{% if active_league %}?league_id={{ active_league.id }}{% endif %}" class="player-link">
-                  {{ entry.display_name }}
-                  {% if is_me %}<span class="you-tag">(you)</span>{% endif %}
+                  {{ avatar(entry.display_name, entry.user_id) }}
+                  <span>{{ entry.display_name }}</span>
+                  {% if is_me %}<span class="you-tag">you</span>{% endif %}
                 </a>
               </td>
               <td class="points-cell"><strong>{{ entry.total_points }}</strong></td>
-              <td class="hide-sm">{{ entry.correct_tips }}</td>
-              <td class="hide-sm">{{ entry.exact_scores }}</td>
-              <td class="badges-cell">
+              <td class="hide-sm num">{{ entry.correct_tips }}</td>
+              <td class="hide-sm num">{{ entry.exact_scores }}</td>
+              <td class="badges-cell hide-sm">
                 {% for code in entry.badges | unique %}
                   {% set name, emoji = badge_display(code) %}
                   <span class="badge-icon" title="{{ name }}">{{ emoji }}</span>

@@ -1,10 +1,45 @@
 {% extends "base.html" %}
+{% from "_ui.html" import icon, flag %}
 {% block title %}Matches{% endblock %}
 
 {% block content %}
+{# Count open matches the user hasn't tipped yet — drives the nudge banner. #}
+{% set todo = namespace(count=0, first=None, any_open=False) %}
+{% for group in grouped_phases %}
+  {% for match in group.matches %}
+    {% if not is_locked(match) %}
+      {% set todo.any_open = True %}
+      {% if not user_preds.get(match.id) %}
+        {% set todo.count = todo.count + 1 %}
+        {% if todo.first is none %}{% set todo.first = match.id %}{% endif %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+
 <div class="page-header">
+  <span class="page-eyebrow">Hi {{ current_user.first_name or current_user.username }} 👋</span>
   <h2>Matches</h2>
 </div>
+
+{% if todo.count %}
+  <a href="/matches/{{ todo.first }}" class="todo-banner">
+    <span class="todo-icon">{{ icon("target") }}</span>
+    <span class="todo-text">
+      <strong>{{ todo.count }} match{{ 'es' if todo.count != 1 }} waiting for your tip</strong>
+      <span>Tips lock shortly before kickoff — don't miss out.</span>
+    </span>
+    <span class="todo-go">Tip now {{ icon("arrow-right") }}</span>
+  </a>
+{% elif todo.any_open %}
+  <div class="todo-banner todo-done">
+    <span class="todo-icon">{{ icon("check") }}</span>
+    <span class="todo-text">
+      <strong>You're all set</strong>
+      <span>Every open match has your tip. You can still change them until they lock.</span>
+    </span>
+  </div>
+{% endif %}
 
 <!-- Phase tabs -->
 <div class="tabs">
@@ -22,62 +57,64 @@
     <h3 class="phase-title">{{ group.phase.name }}</h3>
 
     <div class="match-list">
+      {% set day = namespace(last=None) %}
       {% for match in group.matches %}
         {% set pred = user_preds.get(match.id) %}
         {% set locked = is_locked(match) %}
-        <a href="/matches/{{ match.id }}" class="match-card {% if match.is_finished %}finished{% endif %}">
+        {% set local_kick = to_local(match.kickoff_utc) %}
+        {% set this_day = local_kick.strftime('%Y-%m-%d') %}
+        {% if this_day != day.last %}
+          <div class="day-label" data-date="{{ this_day }}">{{ local_kick.strftime('%A, %d %B') }}</div>
+          {% set day.last = this_day %}
+        {% endif %}
+
+        <a href="/matches/{{ match.id }}"
+           class="match-card {% if match.is_finished %}finished{% endif %} {% if not locked and not pred %}needs-tip{% endif %}">
           <div class="match-card-kickoff">
-            {{ to_local(match.kickoff_utc).strftime('%d %b %H:%M') }}
-            {% if locked %}
-              <span class="lock-icon" title="Locked">🔒</span>
+            <span class="kick-time">{{ local_kick.strftime('%H:%M') }}</span>
+            {% if match.is_finished %}
+              <span class="kick-status is-ft">Full time</span>
+            {% elif locked %}
+              <span class="kick-status">{{ icon("lock") }} Locked</span>
             {% else %}
-              <span class="lock-icon open" title="Open">🟢</span>
+              <span class="kick-status is-open"><span class="dot"></span>Open</span>
             {% endif %}
           </div>
 
           <div class="match-card-teams">
-            <span class="team">
-              {% if match.team1_code == 'tbd' %}
-                <span class="flag-placeholder" title="TBD"></span>
-              {% else %}
-                <img src="https://flagcdn.com/20x15/{{ match.team1_code }}.png"
-                     onerror="this.outerHTML='<span class=\'flag-placeholder\'></span>'"
-                     alt="{{ match.team1_name }}" class="flag">
-              {% endif %}
-              {{ match.team1_name }}
+            <span class="team team-home">
+              <span class="team-name">{{ match.team1_name }}</span>
+              {{ flag(match.team1_code, match.team1_name) }}
             </span>
-            <span class="vs">
-              {% if match.is_finished %}
-                <strong>{{ match.result_goals1 }}:{{ match.result_goals2 }}</strong>
-              {% else %}
-                vs
-              {% endif %}
-            </span>
-            <span class="team">
-              {{ match.team2_name }}
-              {% if match.team2_code == 'tbd' %}
-                <span class="flag-placeholder" title="TBD"></span>
-              {% else %}
-                <img src="https://flagcdn.com/20x15/{{ match.team2_code }}.png"
-                     onerror="this.outerHTML='<span class=\'flag-placeholder\'></span>'"
-                     alt="{{ match.team2_name }}" class="flag">
-              {% endif %}
+            {% if match.is_finished %}
+              <span class="vs score"><strong>{{ match.result_goals1 }} : {{ match.result_goals2 }}</strong></span>
+            {% else %}
+              <span class="vs">vs</span>
+            {% endif %}
+            <span class="team team-away">
+              {{ flag(match.team2_code, match.team2_name) }}
+              <span class="team-name">{{ match.team2_name }}</span>
             </span>
           </div>
 
           <div class="match-card-pred">
             {% if pred %}
-              <span class="pred-badge {% if match.is_finished %}{% if pred.points is not none and pred.points >= 10 %}pred-good{% elif pred.points is not none %}pred-bad{% endif %}{% endif %}">
+              {% set tone = '' %}
+              {% if match.is_finished and pred.points is not none %}
+                {% set tone = 'pred-good' if pred.points >= 10 else ('pred-ok' if pred.points > 0 else 'pred-bad') %}
+              {% endif %}
+              <span class="pred-badge {{ tone }}" title="Your tip">
+                {% if not match.is_finished %}<span class="pred-label">Tip</span>{% endif %}
                 {{ pred.pred_goals1 }}:{{ pred.pred_goals2 }}
                 {% if pred.is_joker %}<span class="joker-icon" title="Joker">🃏</span>{% endif %}
                 {% if match.is_finished and pred.points is not none %}
-                  <span class="points-badge">{{ pred.points }}pts</span>
+                  <span class="points-badge">{{ '+' if pred.points > 0 }}{{ pred.points }}</span>
                 {% endif %}
               </span>
             {% elif not locked %}
-              <span class="pred-missing">No prediction yet</span>
+              <span class="tip-cta">{{ icon("edit") }} Tip</span>
             {% else %}
-              <span class="pred-missing">—</span>
+              <span class="pred-missing">No tip</span>
             {% endif %}
           </div>
         </a>

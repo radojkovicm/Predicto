@@ -1,20 +1,24 @@
 {% extends "base.html" %}
 {% block title %}{{ profile_user.username }}'s Profile{% endblock %}
 
+{% from "_ui.html" import avatar %}
 {% block content %}
-<div class="page-header">
-  <h2>
-    {{ profile_user.display_name }}
-    {% if profile_user.id == current_user.id %}<span class="you-tag">(you)</span>{% endif %}
-  </h2>
-  <div class="profile-meta">
-    {% if profile_user.id == current_user.id or current_user.is_admin %}
-      @{{ profile_user.username }} &nbsp;·&nbsp;
-    {% endif %}
-    Member since {{ profile_user.created_at.strftime('%b %Y') }}
-    {% if profile_user.id == current_user.id %}
-      &nbsp;·&nbsp; <a href="/settings">Edit settings</a>
-    {% endif %}
+<div class="profile-head">
+  {{ avatar(profile_user.display_name, profile_user.id, "avatar-xl") }}
+  <div>
+    <h2>
+      {{ profile_user.display_name }}
+      {% if profile_user.id == current_user.id %}<span class="you-tag">you</span>{% endif %}
+    </h2>
+    <div class="profile-meta">
+      {% if profile_user.id == current_user.id or current_user.is_admin %}
+        @{{ profile_user.username }} &nbsp;·&nbsp;
+      {% endif %}
+      Member since {{ profile_user.created_at.strftime('%b %Y') }}
+      {% if profile_user.id == current_user.id %}
+        &nbsp;·&nbsp; <a href="/settings">Edit settings</a>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -77,7 +81,7 @@
 
 <!-- Prediction history -->
 <section class="card">
-  <h3>Prediction History</h3>
+  <h3>Tip history</h3>
   {% if predictions %}
     <div class="table-wrap">
       <table class="pred-history-table">
@@ -101,7 +105,7 @@
               </td>
               <td class="hide-sm">{{ to_local(pred.match.kickoff_utc).strftime('%d %b') }}</td>
               <td>
-                {{ pred.pred_goals1 }}:{{ pred.pred_goals2 }}
+                <strong class="num">{{ pred.pred_goals1 }}:{{ pred.pred_goals2 }}</strong>
                 {% if pred.is_joker %}<span class="joker-icon" title="Joker">🃏</span>{% endif %}
               </td>
               <td>

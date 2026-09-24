@@ -68,6 +68,7 @@ def get_match_stats(db: Session, match_id: int, league_id: Optional[int] = None)
 
     stats["all_predictions"] = [
         {
+            "user_id": p.user_id,
             "display_name": p.user.display_name,
             "pred": f"{p.pred_goals1}:{p.pred_goals2}",
             "is_joker": p.is_joker,
