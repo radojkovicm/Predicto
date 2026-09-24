@@ -45,3 +45,6 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Local AI-assistant config
+.claude/

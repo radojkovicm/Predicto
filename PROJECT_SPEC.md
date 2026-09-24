@@ -1,6 +1,6 @@
 # PROJECT SPEC — World Cup 2026 Prediction Game
 
-> **For: Claude Code (VS Code).** This is the complete build specification. Read it fully before writing any code. Build the entire application end-to-end as described. UI and all user-facing text in **English**. Code comments in English.
+> This is the complete build specification. UI and all user-facing text in **English**. Code comments in English.
 
 ---
 
